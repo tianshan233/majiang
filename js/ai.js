@@ -129,6 +129,21 @@ const AI = {
     if (post === pre && isYakuhai(tile, p.seatWind, g.roundWindOf())) return true;
     return false;
   },
+
+  /* 明杠：杠后向听不恶化才杠；已有 2 杠以上冲三杠子/四杠子 */
+  wantKan(g, seat, tile) {
+    const p = g.players[seat];
+    if (p.riichi) return false;
+    if (this.diff(g) === 'easy') return false;
+    const pre = shanten(counts(p.concealed), p.melds.length);
+    const c2 = counts(p.concealed);
+    c2[tile] = Math.max(0, c2[tile] - 3);
+    const post = shanten(c2, p.melds.length + 1);
+    if (post < pre) return true;
+    const kanCount = p.melds.filter(m => m.type === 'kan').length;
+    if (post === pre && kanCount >= 2) return true;
+    return false;
+  },
 };
 
 /* 贪心拆牌（打牌评估用）：面子/对子/搭子/浮牌 */

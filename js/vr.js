@@ -222,6 +222,7 @@ const VR = {
     const buttons = [];
     if (opts.tsumo) buttons.push(['和', () => game.humanTsumo(), '#ff6f5e']);
     if (opts.ron) buttons.push(['胡', () => game.humanClaim('ron'), '#ff6f5e']);
+    if (opts.kan) buttons.push(['杠', () => game.humanClaim('kan'), '#5aa7ff']);
     if (opts.pon) buttons.push(['碰', () => game.humanClaim('pon'), '#5aa7ff']);
     if (opts.chi) buttons.push(['吃', () => game.humanClaim('chi'), '#5aa7ff']);
     if (opts.riichi) buttons.push(['立直', () => game.humanRiichi(), '#e05550']);
@@ -239,15 +240,16 @@ const VR = {
 
   humanOptions(game) {
     const seat = game.humanSeat;
-    if (seat < 0 || game.cfg.allAI) return { tsumo: false, ron: false, pon: false, chi: false, riichi: false, kans: [], canPass: false };
+    if (seat < 0 || game.cfg.allAI) return { tsumo: false, ron: false, pon: false, kan: false, chi: false, riichi: false, kans: [], canPass: false };
     const g = game;
-    const o = { tsumo: false, ron: false, pon: false, chi: false, riichi: false, kans: [], canPass: false };
+    const o = { tsumo: false, ron: false, pon: false, kan: false, chi: false, riichi: false, kans: [], canPass: false };
     if (g.phase === 'claims' && g.pending) {
       const { claims, step } = g.pending;
       if (step === 'ron' && claims.rons.indexOf(seat) >= 0) o.ron = true;
       if (step === 'pon' && claims.pons.indexOf(seat) >= 0) o.pon = true;
+      if (step === 'pon' && claims.kans.indexOf(seat) >= 0) o.kan = true;
       if (step === 'chi' && claims.chiSeat === seat) o.chi = true;
-      if (o.ron || o.pon || o.chi) o.canPass = true;
+      if (o.ron || o.pon || o.chi || o.kan) o.canPass = true;
     }
     if (g.turn === seat && g.phase === 'draw') {
       if (g.canWinNow(seat, true)) o.tsumo = true;

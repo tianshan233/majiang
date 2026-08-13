@@ -580,20 +580,29 @@ const UI = {
       const { claims, step } = g.pending;
       const me = g.humanSeat;
       if (step === 'ron' && claims.rons.indexOf(me) >= 0) add('胡', 'btn-win', () => g.humanClaim('ron'));
-      else if (step === 'pon' && claims.pons.indexOf(me) >= 0) {
-        const b = document.createElement('button');
-        b.textContent = '碰';
-        b.className = 'btn-call';
-        b.addEventListener('click', () => g.humanClaim('pon'));
-        b.addEventListener('mouseenter', () => {
-          const w = document.querySelector('.pon-wrap');
-          if (w) w.classList.add('active');
-        });
-        b.addEventListener('mouseleave', () => {
-          const w = document.querySelector('.pon-wrap');
-          if (w) w.classList.remove('active');
-        });
-        wrap.appendChild(b);
+      else if (step === 'pon' && (claims.pons.indexOf(me) >= 0 || (claims.kans || []).indexOf(me) >= 0)) {
+        if ((claims.kans || []).indexOf(me) >= 0) {
+          const b = document.createElement('button');
+          b.textContent = '杠';
+          b.className = 'btn-call';
+          b.addEventListener('click', () => g.humanClaim('kan'));
+          wrap.appendChild(b);
+        }
+        if (claims.pons.indexOf(me) >= 0) {
+          const b = document.createElement('button');
+          b.textContent = '碰';
+          b.className = 'btn-call';
+          b.addEventListener('click', () => g.humanClaim('pon'));
+          b.addEventListener('mouseenter', () => {
+            const w = document.querySelector('.pon-wrap');
+            if (w) w.classList.add('active');
+          });
+          b.addEventListener('mouseleave', () => {
+            const w = document.querySelector('.pon-wrap');
+            if (w) w.classList.remove('active');
+          });
+          wrap.appendChild(b);
+        }
       }
       else if (step === 'chi' && claims.chiSeat === me) {
         const b = document.createElement('button');

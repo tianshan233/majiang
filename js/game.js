@@ -36,6 +36,7 @@ class Game {
     this.lastTile = false;
     this.houtei = false;
     this.rinshan = false;
+    this.chankanWin = false;
     this.turnCount = 0;
     this.pending = null;
     this.lastResult = null;
@@ -296,15 +297,16 @@ class Game {
   }
 
   _resolveClaims(seat, tile) {
-    const claims = { rons: [], pons: [], chiSeat: null, from: seat, tile };
+    const claims = { rons: [], pons: [], kans: [], chiSeat: null, from: seat, tile };
     const hypno = s => this.cheat.flags && this.cheat.flags.hypnotize && !this.players[s].isHuman;
     for (let s = 0; s < 4; s++) if (s !== seat) {
       const pl = this.players[s];
       if (!hypno(s) && this.canRon(s, tile)) claims.rons.push(s);
       if (pl.riichi) continue;
       if (!hypno(s) && counts(pl.concealed)[family(tile)] >= 2) claims.pons.push(s);
+      if (!hypno(s) && counts(pl.concealed)[family(tile)] >= 3) claims.kans.push(s);
     }
-    if (!claims.rons.length && !claims.pons.length) {
+    if (!claims.rons.length && !claims.pons.length && !claims.kans.length) {
       const next = (seat + 1) % 4;
       if (!hypno(next) && this._chiCombos(next, tile).length) claims.chiSeat = next;
     }
@@ -314,7 +316,7 @@ class Game {
   }
 
   /* 副露/荣和判定状态机：按「荣和 > 碰/杠 > 吃」的优先级依次处理。
-   * 吃仅限下家；无任何响应时轮到下家摸牌。 */
+   * 明杠与碰同级（由 AI/玩家决策）；吃仅限下家；无任何响应时轮到下家摸牌。 */
   _claimStep() {
     const { claims } = this.pending;
     while (true) {
@@ -323,19 +325,33 @@ class Game {
         const human = claims.rons.find(s => this.players[s].isHuman);
         if (human !== undefined) { this._update(); return; }
         if (claims.rons.length) { this._ron(claims.rons, claims.tile, claims.from); return; }
+        /* 抢杠无人荣和 → 恢复原加杠/暗杠动作（跳过抢杠判定直接杠） */
+        if (this.pending.chankan && this.pending.resume) {
+          const resume = this.pending.resume;
+          this.pending = null;
+          this._doKan(resume.seat, resume.kan, true);
+          return;
+        }
         this.pending.step = 'pon';
         continue;
       }
       if (step === 'pon') {
-        if (!claims.pons.length) { this.pending.step = 'chi'; continue; }
-        claims.pons.sort((a, b) => ((a - claims.from + 4) % 4) - ((b - claims.from + 4) % 4));
-        const nearest = claims.pons[0];
-        if (this.cfg.allAI || !this.players[nearest].isHuman) {
-          if (AI.wantPon(this, nearest, claims.tile)) { this._pon(nearest, claims.tile, claims.from); return; }
-          claims.pons.shift();
-          continue;
+        const seats = [];
+        for (const s of claims.pons) if (seats.indexOf(s) < 0) seats.push(s);
+        for (const s of (claims.kans || [])) if (seats.indexOf(s) < 0) seats.push(s);
+        if (!seats.length) { this.pending.step = 'chi'; continue; }
+        seats.sort((a, b) => ((a - claims.from + 4) % 4) - ((b - claims.from + 4) % 4));
+        const s0 = seats[0];
+        if (!this.cfg.allAI && this.players[s0].isHuman) { this._update(); return; }
+        if (claims.kans.indexOf(s0) >= 0 && AI.wantKan(this, s0, claims.tile)) {
+          this._minkan(s0, claims.tile, claims.from); return;
         }
-        this._update(); return;
+        if (claims.pons.indexOf(s0) >= 0 && AI.wantPon(this, s0, claims.tile)) {
+          this._pon(s0, claims.tile, claims.from); return;
+        }
+        claims.pons = claims.pons.filter(s => s !== s0);
+        claims.kans = claims.kans.filter(s => s !== s0);
+        continue;
       }
       if (step === 'chi') {
         const cs = claims.chiSeat;
@@ -413,9 +429,48 @@ class Game {
     return opts;
   }
 
-  _doKan(seat, kan) {
+  /* 别人打出第 4 张 → 明杠 */
+  _minkan(seat, tile, from) {
+    const p = this.players[seat];
+    const fam = family(tile);
+    const a = pickTile(p.concealed, fam);
+    const b = pickTile(p.concealed, fam);
+    const c2 = pickTile(p.concealed, fam);
+    removeTilesByFamily(p.concealed, fam, 3);
+    p.melds.push({ type: 'kan', tiles: [tile, a, b, c2].sort(tileCompare), open: true, from });
+    this._evt({ t: 'kan', seat, type: 'minkan', tile: fam, from });
+    this._finishKan(seat, '明杠', fam);
+  }
+
+  /* 抢杠候选：其他家能荣和此牌。kokushiOnly=true 时仅允许国士无双抢暗杠 */
+  _robberSeats(seat, tile, kokushiOnly) {
+    const f = family(tile);
+    const hypno = s => this.cheat.flags && this.cheat.flags.hypnotize && !this.players[s].isHuman;
+    const out = [];
+    for (let s = 0; s < 4; s++) if (s !== seat && !hypno(s)) {
+      if (!this.canRon(s, f)) continue;
+      if (!kokushiOnly) { out.push(s); continue; }
+      const c = counts(this.players[s].concealed);
+      c[f]++;
+      if (isKokushi(c)) out.push(s);
+    }
+    return out;
+  }
+
+  _doKan(seat, kan, skipRobber) {
     const p = this.players[seat];
     if (kan.type === 'ankan') {
+      /* 国士无双可抢暗杠 */
+      if (!skipRobber) {
+        const robbers = this._robberSeats(seat, kan.tile, true);
+        if (robbers.length) {
+          this.pending = { claims: { rons: robbers, pons: [], kans: [], chiSeat: null, from: seat, tile: family(kan.tile) }, step: 'ron', chankan: true, resume: { seat, kan } };
+          this.phase = 'claims';
+          this._log(p.name + ' 暗杠 ' + tileName(kan.tile) + ' 被抢杠！');
+          this._claimStep();
+          return;
+        }
+      }
       const fam = family(kan.tile);
       const actual = [];
       let rem = 4;
@@ -423,23 +478,53 @@ class Game {
         if (family(p.concealed[i]) === fam) { actual.push(p.concealed[i]); p.concealed.splice(i, 1); rem--; }
       }
       p.melds.push({ type: 'kan', tiles: actual.sort(tileCompare), open: false, from: -1 });
+      this._evt({ t: 'kan', seat, type: 'ankan', tile: fam });
+      this._finishKan(seat, '暗杠', fam);
     } else {
       const m = p.melds.find(mm => mm.type === 'pon' && family(mm.tiles[0]) === family(kan.tile));
       if (!m) return;
+      /* 加杠：先判抢杠（普通荣和） */
+      if (!skipRobber) {
+        const robbers = this._robberSeats(seat, kan.tile, false);
+        if (robbers.length) {
+          this.pending = { claims: { rons: robbers, pons: [], kans: [], chiSeat: null, from: seat, tile: family(kan.tile) }, step: 'ron', chankan: true, resume: { seat, kan } };
+          this.phase = 'claims';
+          this._log(p.name + ' 加杠 ' + tileName(kan.tile) + ' 被抢杠！');
+          this._claimStep();
+          return;
+        }
+      }
       const extra = pickTile(p.concealed, family(kan.tile));
       if (extra < 0) return;
       m.type = 'kan';
       m.tiles.push(extra);
       const i = p.concealed.indexOf(extra);
       if (i >= 0) p.concealed.splice(i, 1);
+      this._evt({ t: 'kan', seat, type: 'chakan', tile: family(kan.tile) });
+      this._finishKan(seat, '加杠', family(kan.tile));
     }
-    this._evt({ t: 'kan', seat, type: kan.type, tile: family(kan.tile) });
+  }
+
+  _totalKans() {
+    return this.players.reduce((s, p) => s + p.melds.filter(m => m.type === 'kan').length, 0);
+  }
+  _kanOwners() {
+    return this.players.filter(p => p.melds.some(m => m.type === 'kan')).length;
+  }
+
+  /* 杠成立后的公共流程：翻宝牌 → 四杠流局检查 → 岭上摸牌 */
+  _finishKan(seat, label, tileFam) {
+    const p = this.players[seat];
     this.meldCount++;
     this.doraInds.push(this.dead[this.doraInds.length]);
     this._clearIppatsu();
-    this._dbg('副露 seat' + seat + '(' + p.name + ') '
-      + (kan.type === 'ankan' ? '暗杠' : '加杠') + '[' + tileName(kan.tile)
+    this._dbg('副露 seat' + seat + '(' + p.name + ') ' + label + '[' + tileName(tileFam)
       + '] 新宝牌指示[' + tileName(this.dead[this.doraInds.length - 1]) + ']');
+    /* 四杠流局：全场杠数达 4 且分属两家及以上 */
+    if (this._totalKans() >= 4 && this._kanOwners() >= 2) {
+      this._ryuukyoku('四杠散了');
+      return;
+    }
     if (!this.dead.length) { this._ryuukyoku(); return; }
     const rinshan = this.dead.pop();
     p.concealed.push(rinshan);
@@ -449,7 +534,7 @@ class Game {
     this.rinshan = true;
     this.phase = 'draw';
     this._evt({ t: 'draw', seat, tile: rinshan, rinshan: true });
-    this._log(p.name + ' ' + (kan.type === 'ankan' ? '暗杠' : '加杠') + ' ' + tileName(kan.tile));
+    this._log(p.name + ' ' + label + ' ' + tileName(tileFam));
     this._update();
     if (this.canWinNow(seat, true)) {
       if (p.isHuman && !this.cfg.allAI) return;
@@ -477,6 +562,7 @@ class Game {
       riichi: p.riichi,
       ippatsu: p.ippatsu,
       rinshan: this.rinshan,
+      chankan: this.chankanWin,
       haitei: tsumo && this.lastTile,
       houtei: !tsumo && this.houtei,
       tenhou: this.tenhouFlag === seat,
@@ -516,7 +602,9 @@ class Game {
   }
 
   _ron(winners, tile, from) {
+    this.chankanWin = !!(this.pending && this.pending.chankan);
     const infos = winners.map(w => this.evalWinInfo(w, false, tile));
+    this.chankanWin = false;
     this._settleWin(winners, from, false, infos, tile);
   }
 
@@ -587,7 +675,7 @@ class Game {
     return shanten(counts(p.concealed), p.melds.length) === 0;
   }
 
-  _ryuukyoku() {
+  _ryuukyoku(reason) {
     const tenpaiSeats = [], notenSeats = [];
     for (let s = 0; s < 4; s++) {
       if (this._isTenpai(s)) tenpaiSeats.push(s); else notenSeats.push(s);
@@ -605,7 +693,8 @@ class Game {
       if (rem > 0) delta[tenpaiSeats[0]] += rem;
     }
     this._applyScore(delta);
-    this._log('流局！听牌：' + (tenpaiSeats.map(s => this.players[s].name).join('、') || '无人')
+    this._log('流局！' + (reason ? '（' + reason + '）' : '')
+      + ' 听牌：' + (tenpaiSeats.map(s => this.players[s].name).join('、') || '无人')
       + (tenpaiSeats.length ? ' 不听的玩家支付点数' : ' 无人听牌，不支付点数'));
     this._dbg('流局 听牌：' + (tenpaiSeats.map(s => 'seat' + s + '(' + this.players[s].name + ')').join(' ') || '无人')
       + ' 不听：' + (notenSeats.map(s => 'seat' + s + '(' + this.players[s].name + ')').join(' ') || '无人')
@@ -750,6 +839,9 @@ class Game {
     } else if (type === 'pon') {
       if (!claims.pons.includes(me)) return;
       this._pon(me, claims.tile, claims.from);
+    } else if (type === 'kan') {
+      if (!(claims.kans || []).includes(me)) return;
+      this._minkan(me, claims.tile, claims.from);
     } else if (type === 'chi') {
       if (claims.chiSeat !== me) return;
       const best = this._bestChiCombo(me, claims.tile);
@@ -762,7 +854,10 @@ class Game {
         }
         claims.rons = claims.rons.filter(s => s !== me);
       }
-      else if (this.pending.step === 'pon') claims.pons = claims.pons.filter(s => s !== me);
+      else if (this.pending.step === 'pon') {
+        claims.pons = claims.pons.filter(s => s !== me);
+        claims.kans = (claims.kans || []).filter(s => s !== me);
+      }
       else if (this.pending.step === 'chi') claims.chiSeat = null;
       this._claimStep();
     }

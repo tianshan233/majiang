@@ -231,6 +231,7 @@ function addBasicYaku(yaku, ctx, menzen) {
   if (ctx.riichi && ctx.ippatsu) yaku.push({ name: '一发', han: 1 });
   if (menzen && ctx.tsumo) yaku.push({ name: '门前清自摸', han: 1 });
   if (ctx.rinshan) yaku.push({ name: '岭上开花', han: 1 });
+  if (ctx.chankan) yaku.push({ name: '抢杠', han: 1 });
   if (ctx.haitei) yaku.push({ name: '海底摸月', han: 1 });
   if (ctx.houtei) yaku.push({ name: '河底捞鱼', han: 1 });
 }
@@ -300,6 +301,8 @@ function evaluateDecomp(d, ctx, calls, menzen, allTiles) {
     }
   }
   if (allTri) yaku.push({ name: '对对和', han: 2 });
+  const kanCount = calls.filter(m => m.type === 'kan').length;
+  if (kanCount === 3) yaku.push({ name: '三杠子', han: 2 });
   if (concealedTri === 4) {
     const tanki = family(ctx.winTile) === pair;
     yaku.push({ name: tanki ? '四暗刻单骑' : '四暗刻', han: tanki ? 26 : 13, yakuman: true });
@@ -382,6 +385,7 @@ function detectGlobalYakuman(allTiles, ctx) {
   if (chuuren) yaku.push(chuuren);
   if (ctx.tenhou) yaku.push({ name: '天和', han: 13, yakuman: true });
   if (ctx.chiihou) yaku.push({ name: '地和', han: 13, yakuman: true });
+  if ((ctx.calls || []).filter(m => m.type === 'kan').length >= 4) yaku.push({ name: '四杠子', han: 13, yakuman: true });
   return yaku;
 }
 
