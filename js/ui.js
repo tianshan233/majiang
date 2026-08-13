@@ -1126,10 +1126,13 @@ const UI = {
     byId('cheat-select').innerHTML = '';
   },
 
-  /* 外挂项点击：桌面直接触发；移动端（无 hover）第一次点击先展开用法介绍 */
+  /* 外挂项点击：需二次选择的（选役满/牌/对手）直接进入选择；
+   * 立即生效的（开关/一次性）在移动端第一次点击先展开用法确认 */
   _cheatItemTap(el) {
     const isTouch = window.matchMedia && window.matchMedia('(hover: none)').matches;
-    if (isTouch && !el.classList.contains('tip-show')) {
+    const ch = Cheats.def(el.dataset.id);
+    const immediate = ch && (ch.type === 'toggle' || ch.type === 'instant');
+    if (isTouch && immediate && !el.classList.contains('tip-show')) {
       const list = byId('cheat-list');
       if (list) list.querySelectorAll('.cheat-item.tip-show').forEach(x => x.classList.remove('tip-show'));
       el.classList.add('tip-show');
@@ -1145,7 +1148,7 @@ const UI = {
     const ch = Cheats.def(id);
     if (!ch || !Cheats.canUse(g, id)) return;
     if (ch.type === 'toggle' || ch.type === 'instant') {
-      Cheats.activate(g, id);
+      if (Cheats.activate(g, id)) this.els.hint.textContent = '已使用「' + ch.name + '」';
       this.renderCheatPanel();
       return;
     }
@@ -1160,6 +1163,7 @@ const UI = {
     if (!g || !sel || !el) { el.innerHTML = ''; return; }
     const ch = Cheats.def(sel.id);
     let html = '<div class="cheat-select-title">' + ch.name + '：请选择</div>';
+    html += '<div class="cheat-select-usage">' + (ch.usage || '') + '</div>';
     if (ch.type === 'pattern') {
       html += '<div class="cheat-opts">' + YAKUMAN_PATTERNS.map(p =>
         '<div class="cheat-opt" data-p="' + p.name + '">' + p.name + '</div>').join('') + '</div>';
@@ -1192,8 +1196,8 @@ const UI = {
     const sel = this.cheatSelect;
     if (!g || !sel) return;
     const ch = Cheats.def(sel.id);
-    if (ch.type === 'pattern' && data.p) { Cheats.activate(g, sel.id, data.p); this.renderCheatPanel(); return; }
-    if (ch.type === 'opp' && data.o) { Cheats.activate(g, sel.id, +data.o); this.renderCheatPanel(); return; }
+    if (ch.type === 'pattern' && data.p) { if (Cheats.activate(g, sel.id, data.p)) this.els.hint.textContent = '已使用「' + ch.name + '」'; this.renderCheatPanel(); return; }
+    if (ch.type === 'opp' && data.o) { if (Cheats.activate(g, sel.id, +data.o)) this.els.hint.textContent = '已使用「' + ch.name + '」'; this.renderCheatPanel(); return; }
     if (ch.type === 'opptile' && sel.stage === 0 && data.o) {
       sel.stage = 1; sel.seat = +data.o;
       this.renderCheatSelect();
@@ -1206,8 +1210,8 @@ const UI = {
     const sel = this.cheatSelect;
     if (!g || !sel) return;
     const ch = Cheats.def(sel.id);
-    if (ch.type === 'tile' || ch.type === 'handtile') { Cheats.activate(g, sel.id, tile); this.renderCheatPanel(); return; }
-    if (ch.type === 'opptile' && sel.stage === 1) { Cheats.activate(g, sel.id, { seat: sel.seat, tile }); this.renderCheatPanel(); return; }
+    if (ch.type === 'tile' || ch.type === 'handtile') { if (Cheats.activate(g, sel.id, tile)) this.els.hint.textContent = '已使用「' + ch.name + '」'; this.renderCheatPanel(); return; }
+    if (ch.type === 'opptile' && sel.stage === 1) { if (Cheats.activate(g, sel.id, { seat: sel.seat, tile })) this.els.hint.textContent = '已使用「' + ch.name + '」'; this.renderCheatPanel(); return; }
   },
 };
 
