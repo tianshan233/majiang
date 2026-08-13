@@ -1102,14 +1102,41 @@ const UI = {
       else if (ch.cooldown && (c.cooldown[ch.id] || 0) > 0) state = '冷却' + c.cooldown[ch.id];
       html += '<div class="cheat-item' + (!avail ? ' disabled' : '') + (on ? ' on' : '') + '" data-id="' + ch.id + '">'
         + '<span class="ci-icon">' + ch.icon + '</span><span class="ci-name">' + ch.name + '</span>'
-        + '<span class="ci-state">' + state + '</span></div>';
+        + '<span class="ci-state">' + state + '</span>'
+        + '<div class="ci-tip">'
+        + '<div class="ci-tip-head">' + ch.icon + ' ' + ch.name + '</div>'
+        + '<div class="ci-tip-desc">' + ch.desc + '</div>'
+        + '<div class="ci-tip-usage">' + (ch.usage || '') + '</div>'
+        + '<button class="ci-tip-use"' + (!avail ? ' disabled' : '') + '>使用</button>'
+        + '</div></div>';
     });
     list.innerHTML = html;
     list.querySelectorAll('.cheat-item').forEach(el => {
-      el.addEventListener('click', () => this.onCheatClick(el.dataset.id));
+      el.addEventListener('click', () => this._cheatItemTap(el));
+      const useBtn = el.querySelector('.ci-tip-use');
+      if (useBtn) {
+        useBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          el.classList.remove('tip-show');
+          this.onCheatClick(el.dataset.id);
+        });
+      }
     });
     this.cheatSelect = null;
     byId('cheat-select').innerHTML = '';
+  },
+
+  /* 外挂项点击：桌面直接触发；移动端（无 hover）第一次点击先展开用法介绍 */
+  _cheatItemTap(el) {
+    const isTouch = window.matchMedia && window.matchMedia('(hover: none)').matches;
+    if (isTouch && !el.classList.contains('tip-show')) {
+      const list = byId('cheat-list');
+      if (list) list.querySelectorAll('.cheat-item.tip-show').forEach(x => x.classList.remove('tip-show'));
+      el.classList.add('tip-show');
+      return;
+    }
+    el.classList.remove('tip-show');
+    this.onCheatClick(el.dataset.id);
   },
 
   onCheatClick(id) {

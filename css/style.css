@@ -858,6 +858,7 @@ footer { text-align: center; margin-top: 12px; font-size: 12px; color: #6f8ba3; 
   padding: 8px 10px; border-radius: 8px; cursor: pointer;
   border: 1px solid rgba(140, 180, 220, .18);
   margin-bottom: 6px; background: rgba(14, 32, 54, .5);
+  position: relative;
 }
 .cheat-item:hover { border-color: var(--gold-dim); background: rgba(240, 192, 112, .08); }
 .cheat-item.disabled { opacity: .4; cursor: not-allowed; }
@@ -866,6 +867,34 @@ footer { text-align: center; margin-top: 12px; font-size: 12px; color: #6f8ba3; 
 .cheat-item .ci-state { font-size: 11px; color: #9db3c6; }
 .cheat-item.on { border-color: var(--gold); background: rgba(240, 192, 112, .16); }
 .cheat-item.on .ci-state { color: #79d18a; }
+/* 外挂用法提示浮层：桌面 hover 浮现，移动端点击展开 */
+.ci-tip {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+  background: linear-gradient(180deg, #1a3a5c, #0d1f33);
+  border: 1px solid rgba(240, 192, 112, .45);
+  border-radius: 9px; padding: 9px 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .6);
+  z-index: 100; font-size: 12px; line-height: 1.55; color: #c8d8e6;
+  display: none;
+}
+.ci-tip-head { font-weight: 800; color: var(--gold-bright); font-size: 13px; margin-bottom: 4px; }
+.ci-tip-desc { color: #e8edf4; margin-bottom: 3px; }
+.ci-tip-usage { color: #9db3c6; }
+.ci-tip-use {
+  margin-top: 7px; padding: 5px 16px; border: none; border-radius: 6px;
+  background: linear-gradient(180deg, #f5d78e, #d9a94e); color: #3a2608;
+  font-weight: 700; cursor: pointer; font-size: 12px;
+}
+.ci-tip-use:disabled { opacity: .4; cursor: not-allowed; }
+/* 桌面（有 hover 能力）：悬浮显示，纯展示 */
+@media (hover: hover) and (pointer: fine) {
+  .cheat-item:hover .ci-tip { display: block; }
+  .ci-tip-use { display: none; }
+}
+/* 移动端（无 hover）：点击展开，带「使用」按钮 */
+@media (hover: none) {
+  .cheat-item.tip-show .ci-tip { display: block; }
+}
 #cheat-select { border-top: 1px solid rgba(255, 255, 255, .1); margin-top: 8px; padding-top: 8px; }
 .cheat-select-title { font-size: 12px; color: #9db3c6; margin-bottom: 6px; }
 .cheat-tiles { display: flex; flex-wrap: wrap; gap: 3px; }
