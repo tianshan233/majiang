@@ -322,7 +322,7 @@ try {
   ok(cssText.indexOf('.zone-north .zone-discards .tile') >= 0 && cssText.indexOf('rotate(180deg)') >= 0, 'CSS含对家牌河倒置规则');
   ok(cssText.indexOf('.side-body') >= 0 && cssText.indexOf('flex-direction: row-reverse') >= 0, 'CSS含左右家外侧手牌柱+内侧牌河布局');
   ok(cssText.indexOf('grid-auto-flow: column') >= 0, 'CSS含左右家牌河竖向往下码规则');
-  ok(cssText.indexOf('.zone-west .zone-backs') >= 0 && cssText.indexOf('skewX(10deg)') >= 0 && cssText.indexOf('perspective(900px)') >= 0, 'CSS含手牌柱外八倾斜+3D透视规则');
+  ok(cssText.indexOf('.zone-west .zone-backs') >= 0 && cssText.indexOf('skewX(-10deg)') >= 0 && cssText.indexOf('perspective(900px)') >= 0, 'CSS含手牌柱外八倾斜+3D透视规则');
   ok(cssText.indexOf('.zone-west .tile-back') >= 0 && cssText.indexOf('rotateX(13deg)') >= 0 && cssText.indexOf('var(--i') >= 0, 'CSS含单张牌背平行四边形梯形透视+逐张外八弧线规则');
   const g6 = new Game({ mode: 'east', allAI: false, speed: 0, humanSeat: 1 });
   g6._schedule = () => {};
