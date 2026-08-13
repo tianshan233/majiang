@@ -446,7 +446,7 @@ const UI = {
     if (g.cfg.allAI) { this.els.hand.style.display = 'none'; return; }
     this.els.hand.style.display = '';
     const myDrawn = p.lastDrawn;
-    const sorted = p.concealed.slice().sort((a, b) => a - b);
+    const sorted = sortTiles(p.concealed);
     let tiles = sorted.slice();
     let drawnIndex = -1;
     if (myDrawn !== null) {
@@ -595,7 +595,7 @@ const UI = {
     if (!combos.length) return '';
     let html = '';
     for (const cb of combos) {
-      const seq = [cb[0], cb[1], tile].sort((a, b) => a - b);
+      const seq = [cb[0], cb[1], tile].sort(tileCompare);
       html += '<div class="chi-combo" data-a="' + cb[0] + '" data-b="' + cb[1] + '">'
         + seq.map(t => t === tile
           ? '<span class="chi-claimed">' + tileEl(t) + '<span class="chi-arrow">▼</span></span>'

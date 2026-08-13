@@ -167,5 +167,48 @@ function makeGame(hand, discards) {
   ok(g.canRon(1, 9) === true, '无振听状态可荣和');
 }
 
+/* ---------- 流局罚符 ---------- */
+{
+  const tenpaiHand = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 13]; // 听 1p/4p
+  const notenHand = [0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 27, 28, 29]; // 4 向听
+  const mk = () => new api.Game({ mode: 'east', allAI: false, speed: 0, humanSeat: 1 });
+  // 2 听 + 2 不听：各不听付 1500，各听牌得 1500
+  {
+    const g = mk();
+    g.dealer = 0;
+    g.players = [0, 1, 2, 3].map((_, i) => ({
+      name: 'P' + i, isHuman: i === 1, concealed: [], melds: [], discards: [], tsumogiri: [],
+      riichi: false, riichiTile: null, ippatsu: false, riichiTurnCount: -1, lastDrawn: null,
+      furitenTmp: false, riichiFuriten: false, drawnCount: 0, score: 25000, seatWind: i, delta: 0,
+    }));
+    g.players[2].concealed = tenpaiHand.slice();
+    g.players[3].concealed = tenpaiHand.slice();
+    g.players[0].concealed = notenHand.slice();
+    g.players[1].concealed = notenHand.slice();
+    g._ryuukyoku();
+    const s = g.players.map(p => p.score);
+    ok(s[0] === 23500 && s[1] === 23500 && s[2] === 26500 && s[3] === 26500,
+      '流局罚符 2听2不听各1500，实际 ' + s.join(','));
+  }
+  // 1 听 + 3 不听：不听各付 1000，听牌得 3000
+  {
+    const g = mk();
+    g.dealer = 0;
+    g.players = [0, 1, 2, 3].map((_, i) => ({
+      name: 'P' + i, isHuman: i === 1, concealed: [], melds: [], discards: [], tsumogiri: [],
+      riichi: false, riichiTile: null, ippatsu: false, riichiTurnCount: -1, lastDrawn: null,
+      furitenTmp: false, riichiFuriten: false, drawnCount: 0, score: 25000, seatWind: i, delta: 0,
+    }));
+    g.players[2].concealed = tenpaiHand.slice();
+    g.players[0].concealed = notenHand.slice();
+    g.players[1].concealed = notenHand.slice();
+    g.players[3].concealed = notenHand.slice();
+    g._ryuukyoku();
+    const s = g.players.map(p => p.score);
+    ok(s[2] === 28000 && s[0] === 24000 && s[1] === 24000 && s[3] === 24000,
+      '流局罚符 1听3不听（听牌得3000），实际 ' + s.join(','));
+  }
+}
+
 console.log('pass: ' + pass + ', fail: ' + fail);
 process.exit(fail ? 1 : 0);

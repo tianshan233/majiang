@@ -535,15 +535,15 @@ class Game {
       if (this._isTenpai(s)) tenpaiSeats.push(s); else notenSeats.push(s);
     }
     const delta = [0, 0, 0, 0];
-    if (tenpaiSeats.length) {
-      let total = 0;
-      for (const s of notenSeats) {
-        const amt = s === this.dealer ? 4000 : 3000;
-        total += amt; delta[s] -= amt;
-      }
-      const per = Math.floor(total / tenpaiSeats.length / 100) * 100;
-      let rem = total - per * tenpaiSeats.length;
-      for (const s of tenpaiSeats) delta[s] += per;
+    if (tenpaiSeats.length && notenSeats.length) {
+      /* 罚符总额固定 3000 点：不听者平分缴纳，听牌者平分获得（雀魂/天凤标准规则） */
+      const total = 3000;
+      const perNoten = Math.ceil(total / notenSeats.length / 100) * 100;
+      const actualTotal = perNoten * notenSeats.length;
+      const perTenpai = Math.floor(actualTotal / tenpaiSeats.length / 100) * 100;
+      let rem = actualTotal - perTenpai * tenpaiSeats.length;
+      for (const s of notenSeats) delta[s] -= perNoten;
+      for (const s of tenpaiSeats) delta[s] += perTenpai;
       if (rem > 0) delta[tenpaiSeats[0]] += rem;
     }
     this._applyScore(delta);
