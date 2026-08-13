@@ -1,5 +1,19 @@
 'use strict';
-/* ============ 对局引擎 ============ */
+/* ============ 对局引擎 ============
+ * 状态机（this.phase）：
+ *   idle            未开始
+ *   draw            玩家摸牌后待决策（自摸/杠/立直/打牌）
+ *   discard         玩家刚打出牌，待其他三家响应
+ *   discard-required 副露（碰/吃）后需打出一张牌
+ *   claims          打出的牌正被判定荣和/碰/吃（优先级：荣和 > 碰/杠 > 吃）
+ *   riichi-select   玩家已宣言立直，需选择打出的听牌牌
+ *   round-end       本局结束（和牌/流局），展示结算
+ *   gameover        整场比赛结束
+ *
+ * 座位：seat0=东(右) seat1=南(你) seat2=西(左) seat3=北(上)
+ * 牌墙：wall(122 张可摸) + dead(14 张王牌：前 4 张宝牌指示、index5 起里宝牌、末张起岭上牌)
+ * 点数守恒：四人分数之和恒为 100000（25000 起）。
+ */
 const AI_NAMES = ['钟离', '胡桃', '可莉', '行秋'];
 
 class Game {
@@ -257,6 +271,8 @@ class Game {
     this._claimStep();
   }
 
+  /* 副露/荣和判定状态机：按「荣和 > 碰/杠 > 吃」的优先级依次处理。
+   * 吃仅限下家；无任何响应时轮到下家摸牌。 */
   _claimStep() {
     const { claims } = this.pending;
     while (true) {

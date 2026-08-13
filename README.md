@@ -4,8 +4,17 @@
 
 纯静态、零构建、无后端、无 CDN 运行时依赖的日麻（立直麻将）游戏。视觉与交互高度模仿「雀魂」，支持人机对战、AI 观战、牌谱导入导出与回放、段位战绩成就、VR（WebXR/Pico）等。
 
+## 在线试玩
+
+- 🀄 **阿里云 ESA**：<http://majiang.elsword.top/>
+- 🐙 **GitHub Pages**：<https://tianshan233.github.io/majiang/>
+
 - 直接双击 `index.html`（`file://` 协议）即可运行
 - 可像静态页面一样部署到阿里云 ESA / GitHub Pages
+
+## 更新日志
+
+详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 快速开始
 

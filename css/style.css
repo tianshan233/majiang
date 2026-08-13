@@ -162,9 +162,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   justify-content: center;
   min-height: 40px;
 }
-/* 左右两家（上家/下家）：牌旋转90°横躺，模拟真实牌桌视角（牌面朝向左右家） */
-.zone-west .tile-back { transform: rotate(90deg); }
-.zone-east .tile-back { transform: rotate(-90deg); }
+/* 左右两家（上家/下家）：牌河/副露旋转90°横躺，模拟真实牌桌视角（牌面朝向左右家） */
 .zone-west .zone-discards .tile { transform: rotate(90deg); }
 .zone-east .zone-discards .tile { transform: rotate(-90deg); }
 .zone-west .meld .tile { transform: rotate(90deg); }
@@ -359,6 +357,27 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   margin-bottom: -4px;
 }
 .tile-back img { width: 100%; height: 100%; display: block; }
+
+/* 左右两家（西/东）手牌：竖向紧叠排列（仿雀魂），从上往下，不旋转 */
+.zone-side .zone-backs {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  min-height: 0;
+  padding-top: 0;
+}
+.zone-side .tile-back {
+  width: 22px; height: 30px;
+  margin-bottom: -19px;
+}
+.zone-side .tile-back.back-last {
+  margin-bottom: 0;
+  transform: translateY(5px);
+  box-shadow: 0 0 0 2px rgba(255, 184, 77, .8), 0 0 12px rgba(255, 184, 77, .5);
+  z-index: 2;
+}
 
 /* ---------- 手牌 ---------- */
 .hand-row {
@@ -709,6 +728,7 @@ footer { text-align: center; margin-top: 12px; font-size: 12px; color: #6f8ba3; 
   .zone-side .zone-discards { grid-template-columns: repeat(6, 26px); grid-auto-rows: 24px; gap: 1px; }
   .tile-back { width: 16px; height: 21px; }
   .zone-backs { padding-top: 4px; min-height: 22px; }
+  .zone-side .tile-back { width: 15px; height: 20px; margin-bottom: -13px; }
   .nameplate { padding: 3px 8px 3px 3px; border-radius: 16px; gap: 4px; }
   .avatar { width: 24px; height: 24px; font-size: 12px; }
   .np-name { font-size: 12px; }

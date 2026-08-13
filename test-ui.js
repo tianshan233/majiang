@@ -173,6 +173,7 @@ try {
   const eastLen = g1.players[0].concealed.length;
   ok(backCount === eastLen, '东家显示牌背 ' + backCount + ' 张（手牌 ' + eastLen + ' 张）');
   ok(backsHtml.indexOf('img/Back.png') >= 0, '牌背使用图片');
+  ok(backsHtml.indexOf('back-last') >= 0, '牌背末张带 back-last 高亮类');
   ok(getEl('backs-south').style.display === 'none', '自己的位置不显示牌背');
 
   // 3. 吃牌预览：hover 吃按钮显示组合与箭头

@@ -32,8 +32,8 @@ function tileEl(t, opts = {}) {
   return '<div class="' + cls + '"' + (opts.clickable ? ' data-id="' + t + '"' : '')
     + '><img src="img/' + TILE_IMG[t] + '.png" alt="' + tileName(t) + '"></div>';
 }
-function tileBackEl(pop) {
-  return '<div class="tile-back' + (pop ? ' back-pop' : '') + '"><img src="img/Back.png" alt=""></div>';
+function tileBackEl(pop, last) {
+  return '<div class="tile-back' + (pop ? ' back-pop' : '') + (last ? ' back-last' : '') + '"><img src="img/Back.png" alt=""></div>';
 }
 
 const UI = {
@@ -428,7 +428,7 @@ const UI = {
       const isNewBack = p.concealed.length > prevB;
       let backsHtml = '';
       for (let i = 0; i < p.concealed.length; i++) {
-        backsHtml += tileBackEl(isNewBack && i === p.concealed.length - 1);
+        backsHtml += tileBackEl(isNewBack && i === p.concealed.length - 1, i === p.concealed.length - 1);
       }
       z.backs.innerHTML = backsHtml;
       z.backs.style.display = '';

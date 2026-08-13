@@ -78,7 +78,9 @@ const ExpertAI = {
     return total / this.SIMS;
   },
 
-  /* 单次 roll-out：贪心向听下降 + 随机摸牌，估算和牌价值 */
+  /* 单次 roll-out：从当前 13 张手牌出发，随机摸牌并贪心打牌，估算和牌价值。
+   * 返回值语义：摸到即和 = 1 + 越早和奖励；最终听牌 = 0.4；一向听 = 0.12；二向听 = 0.02；更差 = 0。
+   * 多次 roll-out 取平均，即近似「打出某张牌后最终和牌的概率」。 */
   simulate(hand, meldCount, pool) {
     let cur = hand.slice();
     let s = shantenCached(counts(cur), meldCount);
