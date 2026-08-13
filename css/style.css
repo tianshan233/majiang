@@ -88,7 +88,14 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .zone-north { margin-bottom: 12px; gap: 7px; }
 .zone-south { margin-top: 12px; gap: 7px; }
 .felt-row { display: flex; align-items: stretch; gap: 10px; }
-.zone-side { flex: 1; justify-content: center; gap: 9px; }
+.zone-side { flex: 1; justify-content: center; gap: 6px; }
+/* 左右两家：外侧手牌柱 + 内侧（朝中央）副露/牌河 */
+.side-body { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; }
+.zone-east .side-body { flex-direction: row-reverse; }
+.side-outer { display: flex; flex-direction: column; align-items: center; }
+.side-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.zone-west .nameplate { align-self: flex-start; }
+.zone-east .nameplate { align-self: flex-end; }
 .table-center {
   width: 330px; flex: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -169,12 +176,15 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .zone-east .meld .tile { transform: rotate(-90deg); }
 /* 对家（北家）的牌河：牌面朝北，倒置显示 */
 .zone-north .zone-discards .tile { transform: rotate(180deg); }
-/* 左右家牌河格子适配旋转后的视觉尺寸 */
+/* 左右家牌河：竖向往下码（一列 6 张，列满再起新列朝中央延伸） */
 .zone-side .zone-discards {
-  grid-template-columns: repeat(6, 41px);
-  grid-auto-rows: 34px;
+  grid-template-rows: repeat(6, 34px);
+  grid-auto-flow: column;
+  grid-auto-columns: 41px;
   gap: 2px;
+  min-height: 34px;
 }
+.zone-east .zone-discards { direction: rtl; }
 .riichi-stick {
   width: 7px; height: 38px; border-radius: 4px;
   background: repeating-linear-gradient(180deg, #ff5252 0 4px, #fff 4px 8px);
@@ -372,6 +382,9 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   width: 22px; height: 30px;
   margin-bottom: -19px;
 }
+/* 指向中央的倾斜：每张牌随序号向中央微移（西家向右、东家向左） */
+.zone-west .zone-backs .tile-back { margin-left: calc(var(--i, 0) * 3px); }
+.zone-east .zone-backs .tile-back { margin-right: calc(var(--i, 0) * 3px); }
 .zone-side .tile-back.back-last {
   margin-bottom: 0;
   transform: translateY(5px);
@@ -702,7 +715,7 @@ footer { text-align: center; margin-top: 12px; font-size: 12px; color: #6f8ba3; 
   .table-center { width: 240px; }
   .wind-plate { width: 48px; height: 48px; font-size: 21px; }
   .zone-discards { grid-template-columns: repeat(6, 26px); }
-  .zone-side .zone-discards { grid-template-columns: repeat(6, 34px); grid-auto-rows: 28px; }
+  .zone-side .zone-discards { grid-template-rows: repeat(6, 28px); grid-auto-columns: 34px; }
   .tile-back { width: 20px; height: 27px; }
 }
 
@@ -725,7 +738,7 @@ footer { text-align: center; margin-top: 12px; font-size: 12px; color: #6f8ba3; 
   .tile { width: 34px; height: 45px; border-radius: 4px; }
   .tile.small { width: 22px; height: 29px; border-radius: 3px; }
   .zone-discards { grid-template-columns: repeat(6, 22px); gap: 2px; min-height: 30px; }
-  .zone-side .zone-discards { grid-template-columns: repeat(6, 26px); grid-auto-rows: 24px; gap: 1px; }
+  .zone-side .zone-discards { grid-template-rows: repeat(6, 24px); grid-auto-columns: 26px; gap: 1px; }
   .tile-back { width: 16px; height: 21px; }
   .zone-backs { padding-top: 4px; min-height: 22px; }
   .zone-side .tile-back { width: 15px; height: 20px; margin-bottom: -13px; }
@@ -754,3 +767,55 @@ footer { text-align: center; margin-top: 12px; font-size: 12px; color: #6f8ba3; 
   .fx-title { font-size: 60px; letter-spacing: 8px; }
   .fx-limit { font-size: 28px; }
 }
+
+/* ---------- 外挂浮动球 + 面板 ---------- */
+.cheat-ball {
+  position: fixed;
+  right: 16px; bottom: 110px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ffd88e, #d9a04a);
+  color: #3a2608;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  cursor: pointer; z-index: 90;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .5), 0 0 0 3px rgba(240, 192, 112, .25);
+  user-select: none; touch-action: manipulation;
+  transition: transform .15s ease;
+}
+.cheat-ball.hidden { display: none; }
+.cheat-ball:hover { transform: scale(1.08); }
+.cheat-panel {
+  position: fixed;
+  right: 16px; bottom: 176px;
+  width: 300px; max-height: 70vh; overflow-y: auto;
+  background: linear-gradient(180deg, #173653, #0c1f35);
+  border: 1px solid rgba(240, 192, 112, .5); border-radius: 14px;
+  padding: 12px; z-index: 95;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .6);
+}
+.cheat-panel.hidden { display: none; }
+.cheat-title { color: var(--gold-bright); font-weight: 800; margin-bottom: 8px; letter-spacing: 2px; }
+.cheat-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(140, 180, 220, .18);
+  margin-bottom: 6px; background: rgba(14, 32, 54, .5);
+}
+.cheat-item:hover { border-color: var(--gold-dim); background: rgba(240, 192, 112, .08); }
+.cheat-item.disabled { opacity: .4; cursor: not-allowed; }
+.cheat-item .ci-icon { font-size: 18px; }
+.cheat-item .ci-name { font-weight: 700; color: #e8edf4; flex: 1; }
+.cheat-item .ci-state { font-size: 11px; color: #9db3c6; }
+.cheat-item.on { border-color: var(--gold); background: rgba(240, 192, 112, .16); }
+.cheat-item.on .ci-state { color: #79d18a; }
+#cheat-select { border-top: 1px solid rgba(255, 255, 255, .1); margin-top: 8px; padding-top: 8px; }
+.cheat-select-title { font-size: 12px; color: #9db3c6; margin-bottom: 6px; }
+.cheat-tiles { display: flex; flex-wrap: wrap; gap: 3px; }
+.cheat-tiles .tile { cursor: pointer; }
+.cheat-tiles .tile:hover { box-shadow: 0 0 0 2px var(--gold-bright); }
+.cheat-opts { display: flex; flex-direction: column; gap: 5px; }
+.cheat-opt { padding: 7px 10px; border-radius: 7px; cursor: pointer; background: rgba(14, 32, 54, .7); border: 1px solid rgba(140, 180, 220, .2); color: #e8edf4; }
+.cheat-opt:hover { border-color: var(--gold-dim); }
+/* 透视（对手手牌翻面）与读心术提示 */
+.peek-hand { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; max-width: 170px; }
+.mindread-chip { font-size: 10px; color: #ffd2cc; background: rgba(255, 90, 90, .2); border: 1px solid rgba(255, 130, 120, .5); border-radius: 4px; padding: 1px 5px; margin-left: 2px; }

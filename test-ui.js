@@ -52,7 +52,7 @@ global.window = { addEventListener: (t, fn) => winHandlers.push(fn), innerHeight
 global.setTimeout = (fn) => { fn(); return 0; };
 
 /* ---------- 加载脚本 ---------- */
-const files = ['js/tiles.js', 'js/yaku.js', 'js/ai.js', 'js/game.js', 'js/effects.js', 'js/ui.js', 'js/replay.js', 'js/dictionary.js', 'js/meta.js']
+const files = ['js/tiles.js', 'js/cheats.js', 'js/yaku.js', 'js/ai.js', 'js/game.js', 'js/effects.js', 'js/ui.js', 'js/replay.js', 'js/dictionary.js', 'js/meta.js']
   .map(f => fs.readFileSync(path.join(__dirname, f), 'utf8'));
 const code = files.join('\n') + '\nreturn { UI, Game };';
 const api = new Function(code)();
@@ -320,7 +320,9 @@ try {
   ok(cssText.indexOf('.zone-west .zone-discards .tile') >= 0 && cssText.indexOf('rotate(90deg)') >= 0, 'CSS含西家牌旋转90°规则');
   ok(cssText.indexOf('.zone-east .zone-discards .tile') >= 0 && cssText.indexOf('rotate(-90deg)') >= 0, 'CSS含东家牌旋转-90°规则');
   ok(cssText.indexOf('.zone-north .zone-discards .tile') >= 0 && cssText.indexOf('rotate(180deg)') >= 0, 'CSS含对家牌河倒置规则');
-  ok(cssText.indexOf('grid-auto-flow: column') < 0, '已移除旧竖排牌河规则');
+  ok(cssText.indexOf('.side-body') >= 0 && cssText.indexOf('flex-direction: row-reverse') >= 0, 'CSS含左右家外侧手牌柱+内侧牌河布局');
+  ok(cssText.indexOf('grid-auto-flow: column') >= 0, 'CSS含左右家牌河竖向往下码规则');
+  ok(cssText.indexOf('.zone-west .zone-backs .tile-back') >= 0 && cssText.indexOf('--i') >= 0, 'CSS含手牌柱指向中央倾斜规则');
   const g6 = new Game({ mode: 'east', allAI: false, speed: 0, humanSeat: 1 });
   g6._schedule = () => {};
   g6.onUpdate = () => {};

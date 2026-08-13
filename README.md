@@ -39,6 +39,7 @@ cd mahjong
 node test-core.js      # 规则单元测试 + AI 全自动对局（点数守恒）
 node test-advanced.js  # 赤宝牌 / 役满（含双倍役满）/ 振听
 node test-replay.js    # 牌谱序列化 / 恢复 / 回放 往返
+node test-cheats.js    # 外挂模式触发 / 次数 / 点数守恒
 node test-ui.js        # 假 DOM UI 冒烟测试
 node test-shanten.js   # 向听公式 vs 暴力对照（较慢，约 1~2 分钟）
 ```
@@ -55,6 +56,7 @@ node test-shanten.js   # 向听公式 vs 暴力对照（较慢，约 1~2 分钟�
 - **特效**：满贯分级全屏特效、役满大招（粒子+震动）、役名逐条弹出、里宝牌翻开、分数滚动
 - **多终端**：桌面/平板/手机竖屏响应式、触控操作
 - **VR**：WebXR（Pico 优先）3D 牌桌，无头显自动退回 2D
+- **外挂模式**（仿万宁象棋）：18 个整活外挂（透视/神之一手/一键胡牌/炸牌/偷牌/傀儡线/时光倒流等），有限次数+冷却或无限两种玩法，开挂局单独记「开挂战绩」
 
 ## 目录结构
 
@@ -64,7 +66,8 @@ css/style.css         样式 + 动画 + 响应式
 img/*.png             34 张牌面 + 牌背（CC0，本地化）
 sound/*.wav|ogg       音效（CC0，本地化）
 js/tiles.js           牌常量/洗牌/计数/宝牌映射/赤宝牌
-js/yaku.js            和牌判定/向听/拆牌/役/符/得点/役满
+js/cheats.js           外挂模式（18 个整活外挂 + 役满牌型库）
+js/yaku.js             和牌判定/向听/拆牌/役/符/得点/役满
 js/ai.js              三档 AI 决策
 js/expert-ai.js       专家 AI（蒙特卡洛）
 js/game.js            对局状态机/副露/结算/连庄/牌谱序列化

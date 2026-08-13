@@ -49,9 +49,10 @@ const Meta = {
     return i + 1 < RANKS.length ? RANKS[i + 1] : null;
   },
 
-  /* 对局结束后记录（仅人机对战，以人类玩家视角统计） */
+  /* 对局结束后记录（仅人机对战，以人类玩家视角统计）；开挂局单独记「开挂战绩」 */
   recordGame(game) {
     if (game.humanSeat < 0) return; /* AI 观战不计入战绩 */
+    if (game.cheat.enabled) { this.recordCheatGame(game); return; }
     this.load();
     const seat = game.humanSeat;
     const d = this.data;
@@ -89,6 +90,40 @@ const Meta = {
     if (d.places[0] >= 10) A.top_10 = true;
 
     this.save();
+  },
+
+  /* 开挂战绩（独立存储，不污染正常段位/战绩） */
+  loadCheat() {
+    try {
+      this.cheatData = JSON.parse(localStorage.getItem('mahjong-cheat-meta') || 'null');
+    } catch (e) { this.cheatData = null; }
+    if (!this.cheatData || typeof this.cheatData !== 'object') {
+      this.cheatData = { games: 0, wins: 0, yakuman: 0, cheatUses: {} };
+    }
+    this.cheatData.cheatUses = this.cheatData.cheatUses || {};
+  },
+  saveCheat() {
+    try { localStorage.setItem('mahjong-cheat-meta', JSON.stringify(this.cheatData)); } catch (e) { /* 忽略 */ }
+  },
+  recordCheatGame(game) {
+    this.loadCheat();
+    const seat = game.humanSeat;
+    const d = this.cheatData;
+    d.games++;
+    /* 顺位 */
+    const order = [0, 1, 2, 3].sort((a, b) => game.players[b].score - game.players[a].score);
+    d.places = d.places || [0, 0, 0, 0];
+    d.places[order.indexOf(seat)]++;
+    const evs = game.events || [];
+    for (const e of evs) {
+      if (e.t === 'win' && e.seats.indexOf(seat) >= 0) {
+        d.wins++;
+        for (const info of (e.infos || [])) if (info.limit && info.limit.indexOf('役满') >= 0) d.yakuman++;
+      }
+    }
+    const used = game.cheat.used || {};
+    for (const id in used) d.cheatUses[id] = (d.cheatUses[id] || 0) + used[id];
+    this.saveCheat();
   },
 
   collectedYaku() {

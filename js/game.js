@@ -43,6 +43,8 @@ class Game {
     this.debugLog = [];
     this.events = [];
     this.onUpdate = null;
+    this.cheat = Object.assign({ enabled: false, limited: true, flags: {}, uses: {}, cooldown: {}, puppet: null }, cfg.cheat || {});
+    this.snapshots = [];
   }
 
   roundWindOf() { return this.roundNo < 4 ? 0 : 1; }
@@ -98,8 +100,11 @@ class Game {
     this.log = [];
     this.debugLog = [];
     this.events = [];
+    this.snapshots = [];
+    if (this.cheat.enabled && typeof Cheats !== 'undefined') Cheats.init(this);
     this._dbg('对局开始：' + (this.cfg.mode === 'east' ? '东风战' : '东南战')
-      + (this.cfg.allAI ? ' / AI观战' : ' / 人机对战') + ' / 行动间隔' + this.cfg.speed + 'ms');
+      + (this.cfg.allAI ? ' / AI观战' : ' / 人机对战') + ' / 行动间隔' + this.cfg.speed + 'ms'
+      + (this.cheat.enabled ? ' / 开挂模式' : ''));
     for (let i = 0; i < 4; i++) {
       this._dbg('seat' + i + ' = ' + this.players[i].name + (this.players[i].isHuman ? '(人类)' : '(AI)'));
     }
@@ -157,8 +162,26 @@ class Game {
 
   _startTurn(seat) {
     this.turnCount++;
+    if (this.cheat.enabled) {
+      this.snapshots.push(this.takeSnapshot());
+      if (this.snapshots.length > 30) this.snapshots.shift();
+      if (typeof Cheats !== 'undefined') Cheats.tickCooldown(this);
+    }
     if (this.wall.length === 0) { this._ryuukyoku(); return; }
-    const tile = this.wall.shift();
+    let tile;
+    /* 心想事成+：摸一张宝牌 */
+    if (seat === this.humanSeat && this.cheat.flags && this.cheat.flags.wishDora) {
+      const doraTiles = this.doraInds.map(doraOf);
+      const avail = doraTiles.filter(t => this.wall.includes(t));
+      if (avail.length) {
+        tile = this.wall.splice(this.wall.indexOf(avail[0]), 1)[0];
+        this.cheat.flags.wishDora = false;
+      } else {
+        tile = this.wall.shift();
+      }
+    } else {
+      tile = this.wall.shift();
+    }
     if (this.wall.length === 0) this.lastTile = true;
     const p = this.players[seat];
     p.concealed.push(tile);
@@ -178,7 +201,25 @@ class Game {
     this._schedule(() => this._aiDecideDraw(seat));
   }
 
+  /* 外挂「傀儡线」：指定 AI 打出的牌 */
+  _aiChooseDiscard(seat) {
+    const puppet = this.cheat.puppet;
+    if (puppet && puppet.seat === seat && this.players[seat].concealed.some(t => family(t) === family(puppet.tile))) {
+      this.cheat.puppet = null;
+      return puppet.tile;
+    }
+    return AI.chooseDiscard(this, seat);
+  }
+
   _aiDecideDraw(seat) {
+    const puppet = this.cheat.puppet;
+    if (puppet && puppet.seat === seat) {
+      this.cheat.puppet = null;
+      if (this.players[seat].concealed.some(t => family(t) === family(puppet.tile))) {
+        this._applyDiscard(seat, puppet.tile, { riichi: false, fromDraw: false });
+        return;
+      }
+    }
     const act = AI.onDraw(this, seat);
     if (act.type === 'tsumo') { this._tsumo(seat); return; }
     if (act.type === 'discard') {
@@ -256,15 +297,16 @@ class Game {
 
   _resolveClaims(seat, tile) {
     const claims = { rons: [], pons: [], chiSeat: null, from: seat, tile };
+    const hypno = s => this.cheat.flags && this.cheat.flags.hypnotize && !this.players[s].isHuman;
     for (let s = 0; s < 4; s++) if (s !== seat) {
       const pl = this.players[s];
-      if (this.canRon(s, tile)) claims.rons.push(s);
+      if (!hypno(s) && this.canRon(s, tile)) claims.rons.push(s);
       if (pl.riichi) continue;
-      if (counts(pl.concealed)[family(tile)] >= 2) claims.pons.push(s);
+      if (!hypno(s) && counts(pl.concealed)[family(tile)] >= 2) claims.pons.push(s);
     }
     if (!claims.rons.length && !claims.pons.length) {
       const next = (seat + 1) % 4;
-      if (this._chiCombos(next, tile).length) claims.chiSeat = next;
+      if (!hypno(next) && this._chiCombos(next, tile).length) claims.chiSeat = next;
     }
     this.pending = { claims, step: 'ron' };
     this.phase = 'claims';
@@ -333,7 +375,7 @@ class Game {
       + '] 来自seat' + from + '(' + this.players[from].name + ') 手牌：' + this._tilesStr(p.concealed));
     this._update();
     if (p.isHuman && !this.cfg.allAI) return;
-    this._schedule(() => this._applyDiscard(seat, AI.chooseDiscard(this, seat), { riichi: false, fromDraw: false }));
+    this._schedule(() => this._applyDiscard(seat, this._aiChooseDiscard(seat), { riichi: false, fromDraw: false }));
   }
 
   _chi(seat, tile, from, combo) {
@@ -358,7 +400,7 @@ class Game {
       + '(' + this.players[from].name + ') 手牌：' + this._tilesStr(p.concealed));
     this._update();
     if (p.isHuman && !this.cfg.allAI) return;
-    this._schedule(() => this._applyDiscard(seat, AI.chooseDiscard(this, seat), { riichi: false, fromDraw: false }));
+    this._schedule(() => this._applyDiscard(seat, this._aiChooseDiscard(seat), { riichi: false, fromDraw: false }));
   }
 
   kanOptions(seat) {
@@ -416,7 +458,7 @@ class Game {
     }
     this.rinshan = false;
     if (p.isHuman && !this.cfg.allAI) return;
-    this._schedule(() => this._applyDiscard(seat, AI.chooseDiscard(this, seat), { riichi: false, fromDraw: false }));
+    this._schedule(() => this._applyDiscard(seat, this._aiChooseDiscard(seat), { riichi: false, fromDraw: false }));
   }
 
   /* ---------- 和牌结算 ---------- */
@@ -583,19 +625,21 @@ class Game {
     this.phase = 'round-end';
     this._update();
     const roundsTotal = this.cfg.mode === 'east' ? 4 : 8;
+    const nextDealer = () => (this.cheat.flags && this.cheat.flags.alwaysDealer)
+      ? this.humanSeat : (this.dealer + 1) % 4;
     let over = false;
     if (res.draw) {
       if (res.dealerTenpai) this.honba++;
       else {
         over = this.roundNo + 1 >= roundsTotal;
         this.honba = 0;
-        if (!over) { this.roundNo++; this.dealer = (this.dealer + 1) % 4; }
+        if (!over) { this.roundNo++; this.dealer = nextDealer(); }
       }
     } else if (res.dealerWon) this.honba++;
     else {
       over = this.roundNo + 1 >= roundsTotal;
       this.honba = 0;
-      if (!over) { this.roundNo++; this.dealer = (this.dealer + 1) % 4; }
+      if (!over) { this.roundNo++; this.dealer = nextDealer(); }
     }
     const maxScore = Math.max(...this.players.map(p => p.score));
     if (over || maxScore >= 30000) {
@@ -737,6 +781,25 @@ class Game {
   }
 
   /* ---------- 牌谱：序列化 / 恢复 ---------- */
+  /* 轻量快照（外挂「时光倒流」用，只含可逆状态） */
+  takeSnapshot() { return this.serialize().snapshot; }
+  applySnapshot(snap) {
+    const g = Game.restore({ snapshot: snap });
+    this.players = g.players;
+    this.wall = g.wall; this.dead = g.dead; this.doraInds = g.doraInds;
+    this.roundNo = g.roundNo; this.honba = g.honba; this.dealer = g.dealer;
+    this.phase = g.phase; this.turn = g.turn; this.drawnTile = g.drawnTile;
+    this.lastTile = g.lastTile; this.houtei = g.houtei; this.rinshan = g.rinshan;
+    this.turnCount = g.turnCount; this.pending = g.pending;
+    this.riichiSticks = g.riichiSticks; this.riichiOwners = g.riichiOwners;
+    this.meldCount = g.meldCount; this.tenhouFlag = g.tenhouFlag; this.chiihouFlag = g.chiihouFlag;
+  }
+  cheatUndo() {
+    if (!this.snapshots.length) return false;
+    this.applySnapshot(this.snapshots.pop());
+    return true;
+  }
+
   serialize() {
     const clone = o => JSON.parse(JSON.stringify(o));
     const snap = {

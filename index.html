@@ -38,9 +38,15 @@
         <!-- 西家 -->
         <div class="player-zone zone-side zone-west" id="zone-west">
           <div class="nameplate" id="np-west"></div>
-          <div class="zone-melds" id="melds-west"></div>
-          <div class="zone-backs" id="backs-west"></div>
-          <div class="zone-discards" id="disc-west"></div>
+          <div class="side-body">
+            <div class="side-outer">
+              <div class="zone-backs" id="backs-west"></div>
+            </div>
+            <div class="side-inner">
+              <div class="zone-melds" id="melds-west"></div>
+              <div class="zone-discards" id="disc-west"></div>
+            </div>
+          </div>
         </div>
 
         <!-- 中央 -->
@@ -55,9 +61,15 @@
         <!-- 东家 -->
         <div class="player-zone zone-side zone-east" id="zone-east">
           <div class="nameplate" id="np-east"></div>
-          <div class="zone-melds" id="melds-east"></div>
-          <div class="zone-backs" id="backs-east"></div>
-          <div class="zone-discards" id="disc-east"></div>
+          <div class="side-body">
+            <div class="side-outer">
+              <div class="zone-backs" id="backs-east"></div>
+            </div>
+            <div class="side-inner">
+              <div class="zone-melds" id="melds-east"></div>
+              <div class="zone-discards" id="disc-east"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -107,7 +119,16 @@
   <div class="fx-hint">点击任意处跳过</div>
 </div>
 
+<!-- 外挂浮动球 + 面板 -->
+<div id="cheat-ball" class="cheat-ball hidden">🃏</div>
+<div id="cheat-panel" class="cheat-panel hidden">
+  <div class="cheat-title">🃏 外挂面板</div>
+  <div id="cheat-list"></div>
+  <div id="cheat-select"></div>
+</div>
+
 <script src="js/tiles.js"></script>
+<script src="js/cheats.js"></script>
 <script src="js/yaku.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/expert-ai.js"></script>

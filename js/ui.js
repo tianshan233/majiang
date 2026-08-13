@@ -32,8 +32,9 @@ function tileEl(t, opts = {}) {
   return '<div class="' + cls + '"' + (opts.clickable ? ' data-id="' + t + '"' : '')
     + '><img src="img/' + TILE_IMG[t] + '.png" alt="' + tileName(t) + '"></div>';
 }
-function tileBackEl(pop, last) {
-  return '<div class="tile-back' + (pop ? ' back-pop' : '') + (last ? ' back-last' : '') + '"><img src="img/Back.png" alt=""></div>';
+function tileBackEl(pop, last, idx) {
+  return '<div class="tile-back' + (pop ? ' back-pop' : '') + (last ? ' back-last' : '')
+    + '" style="--i:' + (idx || 0) + '"><img src="img/Back.png" alt=""></div>';
 }
 
 const UI = {
@@ -103,6 +104,7 @@ const UI = {
     Effects.init();
     this.initSounds();
     this.loadSettings();
+    this.initCheat();
     byId('hand-south').addEventListener('click', e => {
       const t = e.target.closest('.tile.clickable');
       if (!t) return;
@@ -158,6 +160,12 @@ const UI = {
         <label><input type="radio" name="cfg-speed" value="0.7" checked> 正常（0.7 秒）</label>
         <label><input type="radio" name="cfg-speed" value="1.2"> 慢（1.2 秒）</label>
       </div>
+      <div class="cfg-group">
+        <div class="cfg-label">🃏 外挂模式（整活，不计入正常战绩）</div>
+        <label><input type="checkbox" id="cfg-cheat"> 开启外挂模式</label>
+        <label><input type="radio" name="cfg-cheat-mode" value="limited" checked> 有限次数 + 冷却</label>
+        <label><input type="radio" name="cfg-cheat-mode" value="unlimited"> 无限随便用</label>
+      </div>
       <div class="modal-btns">
         <button class="btn-primary" id="cfg-start">开始对局</button>
       </div>`, 'config');
@@ -165,8 +173,10 @@ const UI = {
       const mode = this.checked('cfg-mode');
       const play = this.checked('cfg-play');
       const speed = parseFloat(this.checked('cfg-speed'));
+      const cheatEnabled = !!byId('cfg-cheat').checked;
+      const cheatLimited = this.checked('cfg-cheat-mode') !== 'unlimited';
       this.hideModal();
-      this.startGame({ mode, allAI: play === 'ai', speed: speed * 1000, humanSeat: play === 'ai' ? -1 : 1 });
+      this.startGame({ mode, allAI: play === 'ai', speed: speed * 1000, humanSeat: play === 'ai' ? -1 : 1, cheat: { enabled: cheatEnabled, limited: cheatLimited } });
     });
   },
 
@@ -364,6 +374,7 @@ const UI = {
     this.renderButtons();
     this.renderLog();
     this.renderModal();
+    this.updateCheatBall();
     if (typeof VR !== 'undefined' && VR.active) VR.sync(g);
   },
 
@@ -373,7 +384,7 @@ const UI = {
     const isTurn = g.turn === seat
       && (g.phase === 'draw' || g.phase === 'discard-required' || g.phase === 'riichi-select');
     z.zone.classList.toggle('turn', isTurn);
-    z.np.innerHTML = '<span class="avatar" style="' + AVATAR_STYLE[seat] + '">' + p.name.charAt(0) + '</span>'
+    let npHtml = '<span class="avatar" style="' + AVATAR_STYLE[seat] + '">' + p.name.charAt(0) + '</span>'
       + '<span class="np-name">' + p.name + '</span>'
       + '<span class="np-wind">' + WIND_LABEL[p.seatWind] + '</span>'
       + (seat === g.dealer ? '<span class="badge dealer-badge">庄</span>' : '')
@@ -381,6 +392,11 @@ const UI = {
       + '<span class="np-score">' + p.score + '</span>'
       + (p.delta ? '<span class="np-delta ' + (p.delta > 0 ? 'pos' : 'neg') + '">'
         + (p.delta > 0 ? '+' : '') + p.delta + '</span>' : '');
+    if (g.cheat.flags && g.cheat.flags.mindRead && !p.isHuman) {
+      const ws = waitsFor(tilesFromCounts(counts(p.concealed)), p.melds.length);
+      if (ws.length) npHtml += '<span class="mindread-chip">听 ' + ws.map(tileName).join('') + '</span>';
+    }
+    z.np.innerHTML = npHtml;
 
     let meldsHtml = '';
     const prevM = this.anim.melds[seat] || 0;
@@ -427,8 +443,15 @@ const UI = {
       const prevB = this.anim.backs[seat] || 0;
       const isNewBack = p.concealed.length > prevB;
       let backsHtml = '';
-      for (let i = 0; i < p.concealed.length; i++) {
-        backsHtml += tileBackEl(isNewBack && i === p.concealed.length - 1, i === p.concealed.length - 1);
+      if (g.cheat.flags && g.cheat.flags.peek) {
+        /* 透视：对手手牌翻面显示 */
+        backsHtml = '<div class="peek-hand">'
+          + sortTiles(p.concealed).map(t => tileEl(t, { small: true, glow: isRed(t) || doraTiles.indexOf(family(t)) >= 0 })).join('')
+          + '</div>';
+      } else {
+        for (let i = 0; i < p.concealed.length; i++) {
+          backsHtml += tileBackEl(isNewBack && i === p.concealed.length - 1, i === p.concealed.length - 1, i);
+        }
       }
       z.backs.innerHTML = backsHtml;
       z.backs.style.display = '';
@@ -975,6 +998,128 @@ const UI = {
     html += '<div class="modal-btns"><button class="btn-primary" id="meta-close">知道了</button></div>';
     this.showModal(html, 'rules');
     byId('meta-close').addEventListener('click', () => this.hideModal());
+  },
+
+  /* ---------- 外挂面板 ---------- */
+  initCheat() {
+    const ball = byId('cheat-ball');
+    const panel = byId('cheat-panel');
+    if (!ball || !panel) return;
+    ball.addEventListener('click', () => {
+      panel.classList.toggle('hidden');
+      if (!panel.classList.contains('hidden')) this.renderCheatPanel();
+    });
+    panel.addEventListener('click', e => {
+      const tile = e.target.closest && e.target.closest('.cheat-tiles .tile[data-id]');
+      const opt = e.target.closest && e.target.closest('.cheat-opt');
+      if (tile) this.onCheatSelectTile(+tile.dataset.id);
+      else if (opt) this.onCheatSelectOpt(opt.dataset);
+    });
+  },
+
+  updateCheatBall() {
+    const ball = byId('cheat-ball');
+    if (!ball) return;
+    const g = this.game;
+    const show = g && g.cheat && g.cheat.enabled && g.humanSeat >= 0 && !g.cfg.allAI;
+    ball.classList.toggle('hidden', !show);
+    if (!show) byId('cheat-panel').classList.add('hidden');
+  },
+
+  renderCheatPanel() {
+    const g = this.game;
+    const list = byId('cheat-list');
+    if (!g || !list) return;
+    const c = g.cheat;
+    let html = '';
+    CHEATS.forEach(ch => {
+      const avail = Cheats.canUse(g, ch.id);
+      const on = (ch.type === 'toggle' && c.flags[ch.id]);
+      let state = '';
+      if (ch.type === 'toggle') state = on ? '开' : '关';
+      else if (c.limited && ch.uses) state = '×' + (c.uses[ch.id] || 0);
+      else if (ch.cooldown && (c.cooldown[ch.id] || 0) > 0) state = '冷却' + c.cooldown[ch.id];
+      html += '<div class="cheat-item' + (!avail ? ' disabled' : '') + (on ? ' on' : '') + '" data-id="' + ch.id + '">'
+        + '<span class="ci-icon">' + ch.icon + '</span><span class="ci-name">' + ch.name + '</span>'
+        + '<span class="ci-state">' + state + '</span></div>';
+    });
+    list.innerHTML = html;
+    list.querySelectorAll('.cheat-item').forEach(el => {
+      el.addEventListener('click', () => this.onCheatClick(el.dataset.id));
+    });
+    this.cheatSelect = null;
+    byId('cheat-select').innerHTML = '';
+  },
+
+  onCheatClick(id) {
+    const g = this.game;
+    if (!g) return;
+    const ch = Cheats.def(id);
+    if (!ch || !Cheats.canUse(g, id)) return;
+    if (ch.type === 'toggle' || ch.type === 'instant') {
+      Cheats.activate(g, id);
+      this.renderCheatPanel();
+      return;
+    }
+    this.cheatSelect = { id, stage: 0 };
+    this.renderCheatSelect();
+  },
+
+  renderCheatSelect() {
+    const g = this.game;
+    const sel = this.cheatSelect;
+    const el = byId('cheat-select');
+    if (!g || !sel || !el) { el.innerHTML = ''; return; }
+    const ch = Cheats.def(sel.id);
+    let html = '<div class="cheat-select-title">' + ch.name + '：请选择</div>';
+    if (ch.type === 'pattern') {
+      html += '<div class="cheat-opts">' + YAKUMAN_PATTERNS.map(p =>
+        '<div class="cheat-opt" data-p="' + p.name + '">' + p.name + '</div>').join('') + '</div>';
+    } else if (ch.type === 'opp') {
+      html += '<div class="cheat-opts">' + [0, 2, 3].filter(s => s !== g.humanSeat).map(s =>
+        '<div class="cheat-opt" data-o="' + s + '">' + g.players[s].name + '</div>').join('') + '</div>';
+    } else if (ch.type === 'handtile') {
+      const p = g.players[g.humanSeat];
+      const tiles = Array.from(new Set(p.concealed.map(family))).sort((a, b) => a - b);
+      html += '<div class="cheat-tiles">' + tiles.map(t => tileEl(t, { small: true, clickable: true })).join('') + '</div>';
+    } else if (ch.type === 'tile') {
+      html += '<div class="cheat-tiles">';
+      for (let t = 0; t < 34; t++) html += tileEl(t, { small: true, clickable: true });
+      html += '</div>';
+    } else if (ch.type === 'opptile') {
+      if (sel.stage === 0) {
+        html += '<div class="cheat-opts">' + [0, 2, 3].filter(s => s !== g.humanSeat).map(s =>
+          '<div class="cheat-opt" data-o="' + s + '">' + g.players[s].name + '</div>').join('') + '</div>';
+      } else {
+        html += '<div class="cheat-select-title">指定 ' + g.players[sel.seat].name + ' 打出的牌：</div><div class="cheat-tiles">';
+        for (let t = 0; t < 34; t++) html += tileEl(t, { small: true, clickable: true });
+        html += '</div>';
+      }
+    }
+    el.innerHTML = html;
+  },
+
+  onCheatSelectOpt(data) {
+    const g = this.game;
+    const sel = this.cheatSelect;
+    if (!g || !sel) return;
+    const ch = Cheats.def(sel.id);
+    if (ch.type === 'pattern' && data.p) { Cheats.activate(g, sel.id, data.p); this.renderCheatPanel(); return; }
+    if (ch.type === 'opp' && data.o) { Cheats.activate(g, sel.id, +data.o); this.renderCheatPanel(); return; }
+    if (ch.type === 'opptile' && sel.stage === 0 && data.o) {
+      sel.stage = 1; sel.seat = +data.o;
+      this.renderCheatSelect();
+      return;
+    }
+  },
+
+  onCheatSelectTile(tile) {
+    const g = this.game;
+    const sel = this.cheatSelect;
+    if (!g || !sel) return;
+    const ch = Cheats.def(sel.id);
+    if (ch.type === 'tile' || ch.type === 'handtile') { Cheats.activate(g, sel.id, tile); this.renderCheatPanel(); return; }
+    if (ch.type === 'opptile' && sel.stage === 1) { Cheats.activate(g, sel.id, { seat: sel.seat, tile }); this.renderCheatPanel(); return; }
   },
 };
 
