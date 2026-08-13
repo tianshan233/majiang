@@ -85,7 +85,8 @@ function kokushiShanten(c34) {
 function shanten(c34, locked) {
   let best = 99;
   function dfs(c, idx, sets, pair, taatsu) {
-    while (idx < 34 && c[idx] === 0) idx++;
+    /* !(c[idx] > 0) 同时跳过 0 / NaN / 负数，防御脏数据导致的无限递归 */
+    while (idx < 34 && !(c[idx] > 0)) idx++;
     if (idx >= 34) {
       const m = sets + locked;
       let sh;
@@ -227,7 +228,10 @@ function blockHasTerm(m) {
 }
 
 function addBasicYaku(yaku, ctx, menzen) {
-  if (ctx.riichi) yaku.push({ name: '立直', han: 1 });
+  if (ctx.riichi) {
+    if (ctx.doubleRiichi) yaku.push({ name: '双立直', han: 2 });
+    else yaku.push({ name: '立直', han: 1 });
+  }
   if (ctx.riichi && ctx.ippatsu) yaku.push({ name: '一发', han: 1 });
   if (menzen && ctx.tsumo) yaku.push({ name: '门前清自摸', han: 1 });
   if (ctx.rinshan) yaku.push({ name: '岭上开花', han: 1 });
@@ -303,6 +307,24 @@ function evaluateDecomp(d, ctx, calls, menzen, allTiles) {
   if (allTri) yaku.push({ name: '对对和', han: 2 });
   const kanCount = calls.filter(m => m.type === 'kan').length;
   if (kanCount === 3) yaku.push({ name: '三杠子', han: 2 });
+  /* 三色同刻：万/筒/索同数字刻子 */
+  const triRanks = {};
+  for (const m of melds) if (isTripletMeld(m)) {
+    const t = m.tiles[0];
+    if (t < 27) {
+      const rank = t % 9, suit = Math.floor(t / 9);
+      (triRanks[rank] = triRanks[rank] || {})[suit] = true;
+    }
+  }
+  if (Object.values(triRanks).some(r => r[0] && r[1] && r[2])) yaku.push({ name: '三色同刻', han: 2 });
+  /* 三连刻：同花色连续三个刻子 */
+  const triTiles = melds.filter(m => isTripletMeld(m) && m.tiles[0] < 27).map(m => m.tiles[0]);
+  if (triTiles.some(t => t % 9 <= 6 && triTiles.indexOf(t + 1) >= 0 && triTiles.indexOf(t + 2) >= 0)) {
+    yaku.push({ name: '三连刻', han: 2 });
+  }
+  /* 小三元：三元牌两刻 + 一对 */
+  const dragonTri = melds.filter(m => isTripletMeld(m) && m.tiles[0] >= 31).length;
+  if (dragonTri === 2 && pair >= 31) yaku.push({ name: '小三元', han: 2 });
   if (concealedTri === 4) {
     const tanki = family(ctx.winTile) === pair;
     yaku.push({ name: tanki ? '四暗刻单骑' : '四暗刻', han: tanki ? 26 : 13, yakuman: true });

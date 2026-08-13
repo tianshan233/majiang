@@ -88,7 +88,7 @@ class Game {
       name: i === this.humanSeat ? (this.cfg.playerName || '玩家') : AI_NAMES[i],
       isHuman: i === this.humanSeat,
       concealed: [], melds: [], discards: [], tsumogiri: [],
-      riichi: false, riichiTile: null, ippatsu: false, riichiTurnCount: -1,
+      riichi: false, riichiTile: null, ippatsu: false, riichiTurnCount: -1, doubleRiichi: false,
       lastDrawn: null,
       furitenTmp: false, riichiFuriten: false, drawnCount: 0,
       score: 25000, seatWind: 0, delta: 0,
@@ -137,7 +137,7 @@ class Game {
     for (let i = 0; i < 4; i++) {
       const p = this.players[i];
       p.concealed = []; p.melds = []; p.discards = []; p.tsumogiri = [];
-      p.riichi = false; p.riichiTile = null; p.ippatsu = false; p.riichiTurnCount = -1;
+      p.riichi = false; p.riichiTile = null; p.ippatsu = false; p.riichiTurnCount = -1; p.doubleRiichi = false;
       p.lastDrawn = null;
       p.furitenTmp = false; p.riichiFuriten = false; p.drawnCount = 0;
       p.seatWind = (i - this.dealer + 4) % 4;
@@ -231,6 +231,7 @@ class Game {
     if (act.type === 'riichi') {
       const p = this.players[seat];
       p.riichi = true; p.riichiTile = act.tile; p.ippatsu = true; p.riichiTurnCount = this.turnCount;
+      p.doubleRiichi = this.turnCount <= 4 && this.meldCount === 0;
       this.riichiSticks++; this.riichiOwners.push(seat); p.score -= 1000;
       this._log(p.name + ' 立直！');
       this._applyDiscard(seat, act.tile, { riichi: true, fromDraw: true });
@@ -560,6 +561,7 @@ class Game {
       seatWind: p.seatWind,
       roundWind: this.roundWindOf(),
       riichi: p.riichi,
+      doubleRiichi: p.doubleRiichi,
       ippatsu: p.ippatsu,
       rinshan: this.rinshan,
       chankan: this.chankanWin,
@@ -806,6 +808,7 @@ class Game {
     if (!this.tenpaiDiscards(seat).includes(family(tile))) return;
     const p = this.players[seat];
     p.riichi = true; p.ippatsu = true; p.riichiTurnCount = this.turnCount;
+    p.doubleRiichi = this.turnCount <= 4 && this.meldCount === 0;
     this.riichiSticks++; this.riichiOwners.push(seat); p.score -= 1000;
     this._log(p.name + ' 立直！');
     this._applyDiscard(seat, tile, { riichi: true, fromDraw: tile === this.drawnTile });
@@ -906,7 +909,7 @@ class Game {
         concealed: p.concealed.slice(),
         melds: p.melds.map(m => ({ type: m.type, tiles: m.tiles.slice(), open: m.open, from: m.from })),
         discards: p.discards.slice(), tsumogiri: p.tsumogiri.slice(),
-        riichi: p.riichi, riichiTile: p.riichiTile, ippatsu: p.ippatsu, riichiTurnCount: p.riichiTurnCount,
+        riichi: p.riichi, riichiTile: p.riichiTile, ippatsu: p.ippatsu, riichiTurnCount: p.riichiTurnCount, doubleRiichi: !!p.doubleRiichi,
         lastDrawn: p.lastDrawn, furitenTmp: p.furitenTmp, riichiFuriten: p.riichiFuriten, drawnCount: p.drawnCount,
         score: p.score, seatWind: p.seatWind, delta: p.delta,
       })),
@@ -936,7 +939,7 @@ class Game {
       concealed: p.concealed.slice(),
       melds: p.melds.map(m => ({ type: m.type, tiles: m.tiles.slice(), open: m.open, from: m.from })),
       discards: p.discards.slice(), tsumogiri: p.tsumogiri.slice(),
-      riichi: p.riichi, riichiTile: p.riichiTile, ippatsu: p.ippatsu, riichiTurnCount: p.riichiTurnCount,
+      riichi: p.riichi, riichiTile: p.riichiTile, ippatsu: p.ippatsu, riichiTurnCount: p.riichiTurnCount, doubleRiichi: !!p.doubleRiichi,
       lastDrawn: p.lastDrawn, furitenTmp: p.furitenTmp, riichiFuriten: p.riichiFuriten, drawnCount: p.drawnCount,
       score: p.score, seatWind: p.seatWind, delta: p.delta,
     }));

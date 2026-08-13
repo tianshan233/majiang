@@ -127,6 +127,38 @@ function ctxOf(concealed, extra) {
   const r = api.evaluateWin(ctxOf(c, { winTile: 6 }));
   ok(r && r.fu === 25, '七对子25符，实际: ' + (r && r.fu));
 }
+{
+  // 小三元：白发两刻 + 中雀头
+  const c = [31, 31, 31, 32, 32, 32, 0, 1, 2, 3, 4, 5, 33, 33];
+  const r = api.evaluateWin(ctxOf(c, { winTile: 33 }));
+  ok(r && r.yaku.some(y => y.name === '小三元'), '小三元判定');
+  ok(r && r.yaku.some(y => y.name === '中刻') === false, '小三元雀头的中不作刻');
+}
+{
+  // 三色同刻：2m2p2s 三刻 + 456m + 东对
+  const c = [1, 1, 1, 10, 10, 10, 19, 19, 19, 3, 4, 5, 30, 30];
+  const r = api.evaluateWin(ctxOf(c, { winTile: 1 }));
+  ok(r && r.yaku.some(y => y.name === '三色同刻'), '三色同刻判定');
+}
+{
+  // 三连刻：2m3m4m 三刻 + 789m + 东对
+  const c = [1, 1, 1, 2, 2, 2, 3, 3, 3, 6, 7, 8, 30, 30];
+  const r = api.evaluateWin(ctxOf(c, { winTile: 1 }));
+  ok(r && r.yaku.some(y => y.name === '三连刻'), '三连刻判定');
+}
+{
+  // 双立直：2番（不叠加普通立直）
+  const c = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12];
+  const r = api.evaluateWin(ctxOf(c, { winTile: 9, riichi: true, doubleRiichi: true }));
+  ok(r && r.yaku.some(y => y.name === '双立直' && y.han === 2), '双立直 2番判定');
+  ok(r && !r.yaku.some(y => y.name === '立直'), '双立直不叠加普通立直');
+}
+{
+  // 普通立直仍 1番
+  const c = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12];
+  const r = api.evaluateWin(ctxOf(c, { winTile: 9, riichi: true }));
+  ok(r && r.yaku.some(y => y.name === '立直' && y.han === 1), '普通立直 1番判定');
+}
 
 /* ---------- AI 全自动对局冒烟测试 ---------- */
 {
