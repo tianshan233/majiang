@@ -84,7 +84,7 @@ class Game {
   start() {
     this.stopped = false;
     this.players = [0, 1, 2, 3].map((_, i) => ({
-      name: i === this.humanSeat ? '天山酱' : AI_NAMES[i],
+      name: i === this.humanSeat ? (this.cfg.playerName || '玩家') : AI_NAMES[i],
       isHuman: i === this.humanSeat,
       concealed: [], melds: [], discards: [], tsumogiri: [],
       riichi: false, riichiTile: null, ippatsu: false, riichiTurnCount: -1,

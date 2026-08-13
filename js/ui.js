@@ -105,14 +105,22 @@ const UI = {
     this.initSounds();
     this.loadSettings();
     this.initCheat();
-    byId('hand-south').addEventListener('click', e => {
+    const handEl = byId('hand-south');
+    handEl.addEventListener('click', e => {
       const t = e.target.closest('.tile.clickable');
       if (!t) return;
       const id = +t.dataset.id;
-      const g = this.game;
-      if (!g) return;
-      if (g.phase === 'riichi-select') g.humanRiichiDiscard(id);
-      else g.humanDiscard(id);
+      if (this.settings.doubleClick) {
+        this.selectHandTile(t, id);
+      } else {
+        this.discardTile(id);
+      }
+    });
+    handEl.addEventListener('dblclick', e => {
+      if (!this.settings.doubleClick) return;
+      const t = e.target.closest('.tile.clickable');
+      if (!t) return;
+      this.discardTile(+t.dataset.id);
     });
     this.els.chiPreview.addEventListener('mouseenter', () => clearTimeout(this.chiTimer));
     this.els.chiPreview.addEventListener('mouseleave', () => this.hideChiPreviewLater(150));
@@ -142,8 +150,22 @@ const UI = {
   },
 
   showConfig() {
+    const s = this.settings;
+    const diff = s.difficulty || 'normal';
+    const dchk = v => v === diff ? ' checked' : '';
     this.showModal(`
       <h2>新对局</h2>
+      <div class="cfg-group">
+        <div class="cfg-label">昵称（不填默认「玩家」）</div>
+        <input type="text" id="cfg-name" placeholder="玩家" maxlength="10" class="cfg-input">
+      </div>
+      <div class="cfg-group">
+        <div class="cfg-label">AI 难度</div>
+        <label><input type="radio" name="cfg-diff" value="easy"${dchk('easy')}> 简单（新手）</label>
+        <label><input type="radio" name="cfg-diff" value="normal"${dchk('normal')}> 普通</label>
+        <label><input type="radio" name="cfg-diff" value="hard"${dchk('hard')}> 困难</label>
+        <label><input type="radio" name="cfg-diff" value="expert"${dchk('expert')}> 专家（蒙特卡洛，思考较久）</label>
+      </div>
       <div class="cfg-group">
         <div class="cfg-label">局数</div>
         <label><input type="radio" name="cfg-mode" value="east" checked> 东风战（东1~东4局）</label>
@@ -162,21 +184,31 @@ const UI = {
       </div>
       <div class="cfg-group">
         <div class="cfg-label">🃏 外挂模式（整活，不计入正常战绩）</div>
-        <label><input type="checkbox" id="cfg-cheat"> 开启外挂模式</label>
-        <label><input type="radio" name="cfg-cheat-mode" value="limited" checked> 有限次数 + 冷却</label>
-        <label><input type="radio" name="cfg-cheat-mode" value="unlimited"> 无限随便用</label>
+        <select id="cfg-cheat" class="cfg-input">
+          <option value="" selected disabled>请选择（默认关闭）</option>
+          <option value="off">关闭外挂模式</option>
+          <option value="limited">开启 · 有限次数 + 冷却</option>
+          <option value="unlimited">开启 · 无限随便用</option>
+        </select>
       </div>
       <div class="modal-btns">
         <button class="btn-primary" id="cfg-start">开始对局</button>
       </div>`, 'config');
+    byId('cfg-name').value = this.settings.playerName || '';
     byId('cfg-start').addEventListener('click', () => {
       const mode = this.checked('cfg-mode');
       const play = this.checked('cfg-play');
       const speed = parseFloat(this.checked('cfg-speed'));
-      const cheatEnabled = !!byId('cfg-cheat').checked;
-      const cheatLimited = this.checked('cfg-cheat-mode') !== 'unlimited';
+      const difficulty = this.checked('cfg-diff') || 'normal';
+      const playerName = (byId('cfg-name').value || '').trim() || '玩家';
+      const cheatVal = byId('cfg-cheat').value;
+      const cheatEnabled = cheatVal === 'limited' || cheatVal === 'unlimited';
+      const cheatLimited = cheatVal === 'limited';
+      this.settings.playerName = playerName;
+      this.settings.difficulty = difficulty;
+      this.saveSettings();
       this.hideModal();
-      this.startGame({ mode, allAI: play === 'ai', speed: speed * 1000, humanSeat: play === 'ai' ? -1 : 1, cheat: { enabled: cheatEnabled, limited: cheatLimited } });
+      this.startGame({ mode, allAI: play === 'ai', speed: speed * 1000, humanSeat: play === 'ai' ? -1 : 1, difficulty, playerName, cheat: { enabled: cheatEnabled, limited: cheatLimited } });
     });
   },
 
@@ -198,7 +230,7 @@ const UI = {
 
   startGame(cfg) {
     if (this.game) this.game.stop();
-    cfg.difficulty = this.settings.difficulty;
+    cfg.difficulty = cfg.difficulty || this.settings.difficulty || 'normal';
     this.game = new Game(cfg);
     this.game.onUpdate = () => this.render();
     this.anim = { discards: {}, melds: {}, backs: {}, lastDrawnValue: null };
@@ -209,9 +241,9 @@ const UI = {
   loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem('mahjong-settings') || '{}');
-      this.settings = Object.assign({ scale: 1, difficulty: 'normal', sound: true, volume: 0.7 }, s);
+      this.settings = Object.assign({ scale: 1, difficulty: 'normal', sound: true, volume: 0.7, playerName: '', doubleClick: false }, s);
     } catch (e) {
-      this.settings = { scale: 1, difficulty: 'normal', sound: true, volume: 0.7 };
+      this.settings = { scale: 1, difficulty: 'normal', sound: true, volume: 0.7, playerName: '', doubleClick: false };
     }
     this.applyScale();
   },
@@ -253,6 +285,10 @@ const UI = {
           <input type="range" id="cfg-vol" min="0" max="100" value="${Math.round(s.volume * 100)}">
         </div>
       </div>
+      <div class="cfg-group">
+        <div class="cfg-label">操作</div>
+        <label><input type="checkbox" id="cfg-dblclick"${s.doubleClick ? ' checked' : ''}> 双击打牌 / 摸切（单击选中，双击打出）</label>
+      </div>
       <div class="modal-btns">
         <button class="btn-primary" id="cfg-save">保存</button>
         <button class="btn-call" id="cfg-try">试听音效</button>
@@ -277,6 +313,7 @@ const UI = {
       this.settings.difficulty = this.checked('cfg-diff') || 'normal';
       this.settings.sound = !!byId('cfg-sound').checked;
       this.settings.volume = parseFloat(byId('cfg-vol').value || '70') / 100;
+      this.settings.doubleClick = !!byId('cfg-dblclick').checked;
       this.saveSettings();
       this.applyScale();
       this.hideModal();
@@ -998,6 +1035,21 @@ const UI = {
     html += '<div class="modal-btns"><button class="btn-primary" id="meta-close">知道了</button></div>';
     this.showModal(html, 'rules');
     byId('meta-close').addEventListener('click', () => this.hideModal());
+  },
+
+  /* ---------- 打牌交互（单击/双击） ---------- */
+  selectHandTile(el, id) {
+    const prev = this.els.hand.querySelector('.tile.selected');
+    if (prev) prev.classList.remove('selected');
+    el.classList.add('selected');
+    this.selectedTile = id;
+  },
+  discardTile(id) {
+    const g = this.game;
+    if (!g) return;
+    if (g.phase === 'riichi-select') g.humanRiichiDiscard(id);
+    else g.humanDiscard(id);
+    this.selectedTile = null;
   },
 
   /* ---------- 外挂面板 ---------- */
