@@ -1,0 +1,9 @@
+{
+  "name": "mahjong-riichi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "纯静态网页版日麻（雀魂风格），无构建、file:// 可跑，可部署到阿里云 ESA / GitHub Pages",
+  "scripts": {
+    "test": "node test-core.js && node test-advanced.js && node test-replay.js && node test-ui.js && node test-shanten.js"
+  }
+}

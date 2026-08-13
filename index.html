@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>立直麻将 · 网页对战</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div class="title">立直麻将<span class="sub">Riichi Mahjong · 人机对战 / AI 观战</span></div>
+  <div class="hdr-btns">
+    <button id="btn-settings">设置</button>
+    <button id="btn-dict">役种图鉴</button>
+    <button id="btn-meta">战绩</button>
+    <button id="btn-log">导出日志</button>
+    <button id="btn-export">导出牌谱</button>
+    <button id="btn-import">导入牌谱</button>
+    <button id="btn-rules">规则</button>
+    <button id="btn-newgame">新对局</button>
+    <button id="btn-vr" style="display:none">进入 VR 牌桌</button>
+  </div>
+  <input type="file" id="paifu-file" accept=".json,application/json" style="display:none">
+</header>
+
+<main class="stage">
+  <div class="table-frame">
+    <div class="felt">
+      <!-- 北家 -->
+      <div class="player-zone zone-north" id="zone-north">
+        <div class="nameplate" id="np-north"></div>
+        <div class="zone-melds" id="melds-north"></div>
+        <div class="zone-backs" id="backs-north"></div>
+        <div class="zone-discards" id="disc-north"></div>
+      </div>
+
+      <div class="felt-row">
+        <!-- 西家 -->
+        <div class="player-zone zone-side zone-west" id="zone-west">
+          <div class="nameplate" id="np-west"></div>
+          <div class="zone-melds" id="melds-west"></div>
+          <div class="zone-backs" id="backs-west"></div>
+          <div class="zone-discards" id="disc-west"></div>
+        </div>
+
+        <!-- 中央 -->
+        <div class="table-center">
+          <div class="wind-plate" id="wind-plate">东</div>
+          <div class="round-line" id="round-line">东1局</div>
+          <div class="honba-line" id="honba-line">0本场</div>
+          <div class="dora-line" id="dora-line"></div>
+          <div class="counter-line" id="counter-line"></div>
+        </div>
+
+        <!-- 东家 -->
+        <div class="player-zone zone-side zone-east" id="zone-east">
+          <div class="nameplate" id="np-east"></div>
+          <div class="zone-melds" id="melds-east"></div>
+          <div class="zone-backs" id="backs-east"></div>
+          <div class="zone-discards" id="disc-east"></div>
+        </div>
+      </div>
+
+      <!-- 南家（你） -->
+      <div class="player-zone zone-south" id="zone-south">
+        <div class="nameplate" id="np-south"></div>
+        <div class="zone-melds" id="melds-south"></div>
+        <div class="zone-backs" id="backs-south"></div>
+        <div class="zone-discards" id="disc-south"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 吃牌预览 -->
+  <div class="chi-preview" id="chi-preview"></div>
+
+  <!-- 手牌 -->
+  <div class="hand-row" id="hand-south"></div>
+</main>
+
+<section class="action-area">
+  <div id="status"></div>
+  <div id="hint"></div>
+  <div id="action-buttons"></div>
+</section>
+
+<aside class="log-panel" id="log-panel">
+  <div class="log-title">对局记录</div>
+  <div id="log"></div>
+</aside>
+
+<footer>
+  点击手牌打出 · 绿色高亮为立直可打出的听牌牌 · 规则说明见右上角「规则」<br>
+  牌面：<a href="https://github.com/FluffyStuff/riichi-mahjong-tiles" style="color:#8fae9c;">riichi-mahjong-tiles</a>（CC0） ·
+  音效：Kenney UI / Digital Audio（CC0） ·
+  3D：Three.js（MIT）
+</footer>
+
+<div id="modal" class="overlay hidden"><div id="modal-content"></div></div>
+
+<!-- 胡牌特效层（全屏，可点击跳过） -->
+<div id="fx" class="fx-overlay hidden">
+  <canvas id="fx-canvas"></canvas>
+  <div id="fx-title" class="fx-title"></div>
+  <div id="fx-limit" class="fx-limit"></div>
+  <div id="fx-sub" class="fx-sub"></div>
+  <div class="fx-hint">点击任意处跳过</div>
+</div>
+
+<script src="js/tiles.js"></script>
+<script src="js/yaku.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/expert-ai.js"></script>
+<script src="js/game.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/three.min.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/replay.js"></script>
+<script src="js/dictionary.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/vr.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  var suits = ['Man', 'Pin', 'Sou'];
+  var names = [];
+  for (var s = 0; s < 3; s++) for (var n = 1; n <= 9; n++) names.push(suits[s] + n);
+  names.push('Ton', 'Nan', 'Shaa', 'Pei', 'Haku', 'Hatsu', 'Chun', 'Back');
+  names.forEach(function (n) { var i = new Image(); i.src = 'img/' + n + '.png'; });
+});
+</script>
+</body>
+</html>
