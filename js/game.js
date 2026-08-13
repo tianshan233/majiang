@@ -102,7 +102,7 @@ class Game {
     this.debugLog = [];
     this.events = [];
     this.snapshots = [];
-    if (this.cheat.enabled && typeof Cheats !== 'undefined') Cheats.init(this);
+    if (typeof Cheats !== 'undefined' && this.humanSeat >= 0) Cheats.init(this);
     this._dbg('对局开始：' + (this.cfg.mode === 'east' ? '东风战' : '东南战')
       + (this.cfg.allAI ? ' / AI观战' : ' / 人机对战') + ' / 行动间隔' + this.cfg.speed + 'ms'
       + (this.cheat.enabled ? ' / 开挂模式' : ''));

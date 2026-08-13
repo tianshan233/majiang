@@ -106,5 +106,22 @@ ok(api.YAKUMAN_PATTERNS.length >= 10, '役满牌型 >= 10，实际 ' + api.YAKUM
   ok(api.Cheats.activate(g, 'money') === false, '次数耗尽后不可再用');
 }
 
+/* 标准模式随时开：初始 enabled=false，用挂后自动转入开挂局（战绩隔离） */
+{
+  const g = new api.Game({ mode: 'east', allAI: false, speed: 0, humanSeat: 1, cheat: { enabled: false, limited: true } });
+  g.players = [0, 1, 2, 3].map((_, i) => ({
+    name: 'P' + i, isHuman: i === 1, concealed: [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 13].slice(),
+    melds: [], discards: [], tsumogiri: [], riichi: false, riichiTile: null, ippatsu: false,
+    riichiTurnCount: -1, lastDrawn: null, furitenTmp: false, riichiFuriten: false, drawnCount: 0,
+    score: 25000, seatWind: i, delta: 0,
+  }));
+  g.wall = []; g.dead = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; g.doraInds = [30];
+  g.turnCount = 1; g.roundNo = 0; g.dealer = 0; g.meldCount = 0; g.tenhouFlag = -1; g.chiihouFlag = -1;
+  api.Cheats.init(g);
+  ok(g.cheat.enabled === false, '标准模式初始未开挂');
+  ok(api.Cheats.activate(g, 'money') === true, '标准模式随时可开挂');
+  ok(g.cheat.enabled === true, '用挂后自动转入开挂局（战绩隔离）');
+}
+
 console.log('pass: ' + pass + ', fail: ' + fail);
 process.exit(fail ? 1 : 0);

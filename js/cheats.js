@@ -88,6 +88,8 @@ const Cheats = {
     if (human < 0) return false;
     const ok = this.apply(game, id, params, human);
     if (ok) {
+      /* 标准模式中途开挂 → 转入开挂局（战绩隔离 + 快照/冷却生效） */
+      game.cheat.enabled = true;
       this.consume(game, id);
       game.cheat.used[id] = (game.cheat.used[id] || 0) + 1;
       game._log('【外挂】' + this.def(id).name);

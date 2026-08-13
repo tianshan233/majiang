@@ -183,12 +183,12 @@ const UI = {
         <label><input type="radio" name="cfg-speed" value="1.2"> 慢（1.2 秒）</label>
       </div>
       <div class="cfg-group">
-        <div class="cfg-label">🃏 外挂模式（整活，不计入正常战绩）</div>
+        <div class="cfg-label">🃏 外挂模式（对局中随时可开，开挂局不计入正常战绩）</div>
         <select id="cfg-cheat" class="cfg-input">
-          <option value="" selected disabled>请选择（默认关闭）</option>
-          <option value="off">关闭外挂模式</option>
-          <option value="limited">开启 · 有限次数 + 冷却</option>
-          <option value="unlimited">开启 · 无限随便用</option>
+          <option value="" selected disabled>请选择</option>
+          <option value="off">标准模式（可随时开挂 · 有限次数）</option>
+          <option value="limited">开局即开 · 有限次数 + 冷却</option>
+          <option value="unlimited">开局即开 · 无限随便用</option>
         </select>
       </div>
       <div class="modal-btns">
@@ -1082,7 +1082,7 @@ const UI = {
     const ball = byId('cheat-ball');
     if (!ball) return;
     const g = this.game;
-    const show = g && g.cheat && g.cheat.enabled && g.humanSeat >= 0 && !g.cfg.allAI;
+    const show = g && g.cheat && g.humanSeat >= 0 && !g.cfg.allAI;
     ball.classList.toggle('hidden', !show);
     if (!show) byId('cheat-panel').classList.add('hidden');
   },
