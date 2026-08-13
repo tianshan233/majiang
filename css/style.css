@@ -330,9 +330,9 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 /* ---------- 牌背增长动画 ---------- */
 .tile-back.back-pop { animation: backPop .42s cubic-bezier(.2, .8, .35, 1.15); }
 @keyframes backPop {
-  0% { transform: translateY(-30px) scale(.55); opacity: 0; }
-  70% { transform: translateY(3px) scale(1.08); opacity: 1; }
-  100% { transform: none; }
+  0% { opacity: 0; scale: .55; translate: 0 -30px; }
+  70% { opacity: 1; scale: 1.08; translate: 0 3px; }
+  100% { opacity: 1; scale: 1; translate: 0 0; }
 }
 
 /* 宝牌闪光 */
@@ -387,30 +387,60 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   width: 22px; height: 30px;
   margin-bottom: -19px;
   position: relative;
-  box-shadow: -2px 2px 4px rgba(0, 0, 0, .3), inset 1px 1px 2px rgba(255, 255, 255, .18);
+  box-shadow: -2px 2px 4px rgba(0, 0, 0, .35), inset 1px 1px 2px rgba(255, 255, 255, .25), inset 0 -2px 3px rgba(255, 255, 255, .1);
 }
-/* 3D 立体牌背：渐变高光（近端亮、远端暗） */
+/* 单张牌背 3D 透视：平行四边形（skewX 绕底部）+ 梯形压缩（rotateX 顶部后倒）+ 牌面转向中央（rotateY）。
+   逐张 translateX 叠加成「外八」弧线：顶部牌往外侧撇、底部牌朝中央收（--i 为牌序，0=柱顶、末张在柱底） */
+.zone-west .tile-back {
+  transform: translateX(calc(var(--i, 0) * .8px - 5.2px)) perspective(320px) rotateX(13deg) rotateY(-12deg) skewX(7deg);
+  transform-origin: 50% 100%;
+}
+.zone-east .tile-back {
+  transform: translateX(calc(-1 * var(--i, 0) * .8px + 5.2px)) perspective(320px) rotateX(13deg) rotateY(12deg) skewX(-7deg);
+  transform-origin: 50% 100%;
+}
+/* 3D 立体牌背：渐变高光（远端暗、近端亮，左右家镜像） */
 .zone-side .tile-back::after {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 42%, rgba(0, 0, 0, .28) 100%);
+  background: linear-gradient(160deg, rgba(0, 0, 0, .42) 0%, rgba(0, 0, 0, .12) 42%, rgba(255, 255, 255, .14) 68%, rgba(255, 255, 255, .3) 100%);
   pointer-events: none;
   border-radius: 4px;
 }
-/* 指向中央的「外八」倾斜 + 3D 透视（顶部往外侧撇、底部朝中央收，仿雀魂） */
+.zone-east .tile-back::after {
+  background: linear-gradient(200deg, rgba(0, 0, 0, .42) 0%, rgba(0, 0, 0, .12) 42%, rgba(255, 255, 255, .14) 68%, rgba(255, 255, 255, .3) 100%);
+}
+/* 整列手牌柱「外八」倾斜 + 3D 透视：顶部往外侧撇、底部朝中央收（仿雀魂俯视汇聚） */
 .zone-west .zone-backs {
-  transform: perspective(800px) rotateY(-16deg) skewX(8deg);
+  transform: perspective(900px) rotateY(-18deg) skewX(10deg);
   transform-origin: center;
 }
 .zone-east .zone-backs {
-  transform: perspective(800px) rotateY(16deg) skewX(-8deg);
+  transform: perspective(900px) rotateY(18deg) skewX(-10deg);
   transform-origin: center;
 }
-.zone-side .tile-back.back-last {
+/* 最新摸牌（柱底一张）：保持透视变形 + 金色高亮呼吸光 */
+.zone-west .tile-back.back-last {
   margin-bottom: 0;
-  transform: translateY(5px);
-  box-shadow: 0 0 0 2px rgba(255, 184, 77, .8), 0 0 12px rgba(255, 184, 77, .5);
+  transform: translateY(5px) translateX(calc(var(--i, 0) * .8px - 5.2px)) perspective(320px) rotateX(13deg) rotateY(-12deg) skewX(7deg);
+  box-shadow: 0 0 0 2px rgba(255, 184, 77, .85), 0 0 14px rgba(255, 184, 77, .55), -2px 3px 4px rgba(0, 0, 0, .35);
   z-index: 2;
+  animation: lastGlow 2.4s ease-in-out infinite;
+}
+.zone-east .tile-back.back-last {
+  margin-bottom: 0;
+  transform: translateY(5px) translateX(calc(-1 * var(--i, 0) * .8px + 5.2px)) perspective(320px) rotateX(13deg) rotateY(12deg) skewX(-7deg);
+  box-shadow: 0 0 0 2px rgba(255, 184, 77, .85), 0 0 14px rgba(255, 184, 77, .55), 2px 3px 4px rgba(0, 0, 0, .35);
+  z-index: 2;
+  animation: lastGlow 2.4s ease-in-out infinite;
+}
+@keyframes lastGlow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 200, 100, .45)); }
+  50% { filter: drop-shadow(0 0 10px rgba(255, 200, 100, .85)); }
+}
+/* 新牌弹出动画与金色呼吸叠加 */
+.zone-side .tile-back.back-pop.back-last {
+  animation: backPop .42s cubic-bezier(.2, .8, .35, 1.15), lastGlow 2.4s ease-in-out .6s infinite;
 }
 
 /* ---------- 手牌 ---------- */
